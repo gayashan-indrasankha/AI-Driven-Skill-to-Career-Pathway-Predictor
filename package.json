@@ -1,0 +1,17 @@
+{
+  "name": "ai-driven-skill-to-career-pathway-predictor",
+  "version": "1.0.0",
+  "description": "AI-Driven Skill-to-Career Pathway Predictor - Full Stack MERN Application",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "nodemon server/index.js",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm run build --prefix client",
+    "install-all": "npm install && npm install --prefix client"
+  },
+  "keywords": ["AI", "career", "skills", "MERN", "pathway"],
+  "author": "",
+  "license": "ISC"
+}
