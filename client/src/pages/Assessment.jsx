@@ -15,14 +15,14 @@ const steps = [
 ]
 
 const skillCategories = [
-  { category: 'Technical', skills: ['JavaScript', 'Python', 'React', 'Node.js', 'SQL', 'Machine Learning'] },
-  { category: 'Soft Skills', skills: ['Leadership', 'Communication', 'Problem Solving', 'Teamwork'] },
-  { category: 'Domain', skills: ['Product Management', 'Data Analysis', 'UX Design', 'Digital Marketing'] },
+  { category: 'Technical', skills: ['Python', 'SQL', 'Excel', 'Linux', 'Docker', 'Cloud Deployment', 'Networking', 'Electronics', 'Arduino', 'Sensors'] },
+  { category: 'Applied Science', skills: ['Machine Learning', 'Statistics', 'Data Analysis', 'Security', 'Risk Assessment', 'User Research', 'UX Design'] },
+  { category: 'Soft Skills', skills: ['Communication', 'Problem Solving', 'Leadership', 'Teamwork'] },
 ]
 
 const interestOptions = [
-  'Building Products', 'Research & Analysis', 'Design & Creativity', 'Leadership',
-  'Teaching & Mentoring', 'Entrepreneurship', 'Social Impact', 'Technical Innovation',
+  'AI', 'Data', 'Cloud', 'Cybersecurity', 'IoT', 'Agriculture',
+  'Design', 'Social Impact', 'Entrepreneurship', 'Research',
 ]
 
 const Assessment = () => {
@@ -89,17 +89,24 @@ const Assessment = () => {
       }
 
       // Build skill ratings array
-      const skillRatings = Object.entries(formData.skills).map(([name, level]) => ({
-        name,
-        proficiency: level,
-        category: skillCategories.find(c => c.skills.includes(name))?.category?.toLowerCase() || 'technical',
-      }))
+      const categoryMap = { Technical: 'technical', 'Applied Science': 'domain', 'Soft Skills': 'soft' }
+      const skillRatings = Object.entries(formData.skills).map(([name, level]) => {
+        const group = skillCategories.find(c => c.skills.includes(name))?.category
+        return {
+          name,
+          proficiency: level,
+          category: categoryMap[group] || 'technical',
+        }
+      })
 
       const payload = {
         skillRatings,
         extractedInterests: formData.interests,
         careerGoals: formData.careerGoals,
-        workPreference: formData.workPreference,
+        workPreferences: {
+          style: formData.workPreference,
+          industry: formData.interests.filter(item => ['AI', 'Data', 'Cloud', 'Cybersecurity', 'IoT', 'Design'].includes(item)),
+        },
         personalityTraits: [],
         quizResults: { experience: formData.experience, education: formData.education },
       }

@@ -1,270 +1,205 @@
-import { useState, useEffect } from 'react'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  RadialBarChart, RadialBar, Cell,
-} from 'recharts'
-import { FiAward, FiTrendingUp, FiDollarSign, FiBookOpen, FiCheckCircle, FiRefreshCw } from 'react-icons/fi'
+import { useEffect, useState } from 'react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { FiAward, FiBookOpen, FiBriefcase, FiCheckCircle, FiDollarSign, FiExternalLink, FiTarget, FiTrendingUp } from 'react-icons/fi'
 
-// ── Demo data (used when not authenticated) ──────────────────────
 const DEMO = [
   {
-    matchScore: 91, confidenceLevel: 'very-high',
-    gapSkills: ['PyTorch', 'MLflow'],
-    strengths: ['Python', 'Machine Learning', 'SQL'],
-    estimatedTimeToReady: '3–6 months',
+    matchScore: 88,
+    confidenceLevel: 'very-high',
+    gapSkills: ['MLOps', 'Statistics (raise to level 3)'],
+    strengths: ['Python', 'Machine Learning', 'SQL', 'Communication'],
+    estimatedTimeToReady: '4-8 months',
     careerPath: {
-      title: 'Machine Learning Engineer', industry: 'Technology',
-      demandLevel: 'very-high', growthRate: 28, futureOutlook: 'booming', automationRisk: 10,
-      salaryPotential: { entryLevel: { min: 80000, max: 110000 }, midLevel: { min: 110000, max: 160000 }, seniorLevel: { min: 160000, max: 250000 }, currency: 'USD' },
-      requiredDegrees: [{ level: 'bachelor', field: 'Computer Science' }],
-      certifications: [{ name: 'TensorFlow Developer', issuer: 'Google', estimatedPrepTime: '3 months' }, { name: 'AWS ML Specialty', issuer: 'Amazon', estimatedPrepTime: '6 months' }],
-      roles: [{ title: 'Junior ML Engineer', level: 'junior' }, { title: 'ML Engineer', level: 'mid' }, { title: 'Senior ML Engineer', level: 'senior' }],
-      pathwaySteps: [
-        { step: 1, title: 'Python & Math Foundations', durationMonths: 3, description: 'Master Python, linear algebra, and probability.' },
-        { step: 2, title: 'ML Core Concepts', durationMonths: 3, description: 'Supervised/unsupervised learning and evaluation.' },
-        { step: 3, title: 'Deep Learning & Frameworks', durationMonths: 3, description: 'TensorFlow, PyTorch, neural architectures.' },
-        { step: 4, title: 'Deploy & Land First Role', durationMonths: 3, description: 'Build portfolio, deploy models, apply.' },
+      title: 'AI and Machine Learning Solutions Engineer',
+      industry: 'Information Technology',
+      demandLevel: 'very-high',
+      growthRate: 29,
+      futureOutlook: 'booming',
+      automationRisk: 12,
+      salaryPotential: {
+        entryLevel: { min: 180000, max: 350000 },
+        midLevel: { min: 350000, max: 700000 },
+        seniorLevel: { min: 700000, max: 1400000 },
+        currency: 'LKR',
+      },
+      marketSignal: {
+        sriLankaDemandScore: 94,
+        employerTypes: ['ICT/BPM exporters', 'Banks and fintechs', 'AI startups'],
+        businessUseCases: ['Tea leaf quality grading', 'Loan default prediction', 'Hospital triage analytics'],
+        commercialValue: 'Customers pay when predictions reduce cost, risk, or processing time.',
+        evidenceSummary: 'Sri Lanka ICT/BPM is a major service-export sector and SLASSCOM highlights AI and data skills as emerging priorities.',
+        dataSources: [
+          { label: 'EDB ICT/BPM National Export Strategy', url: 'https://www.srilankabusiness.com/national-export-strategy/nes-ict-bpm.html' },
+          { label: 'SLASSCOM Employability Skills Report 2024', url: 'https://slasscom.lk/wp-content/uploads/2024/07/SLASSCOM-EMPLOYABILITY-SKILLS-REPORT-2024.pdf' },
+        ],
+      },
+      prototypeIdeas: [{
+        title: 'AI Tea Leaf Quality Grader',
+        scientificPrinciple: 'Computer vision classification and statistical quality scoring.',
+        targetCustomer: 'Small and medium tea factories',
+        buildCostLkr: 65000,
+        revenueModel: 'Monthly SaaS plus optional camera setup fee',
+      }],
+      learningResources: [
+        { title: 'Machine Learning Specialization', provider: 'DeepLearning.AI', costLkr: 15000, durationWeeks: 10 },
+        { title: 'MLOps Zoomcamp', provider: 'DataTalks.Club', costLkr: 0, durationWeeks: 8 },
       ],
-    },
-  },
-  {
-    matchScore: 78, confidenceLevel: 'high',
-    gapSkills: ['GraphQL', 'Docker'],
-    strengths: ['JavaScript', 'React', 'Node.js'],
-    estimatedTimeToReady: '2–4 months',
-    careerPath: {
-      title: 'Full Stack Developer', industry: 'Technology',
-      demandLevel: 'very-high', growthRate: 23, futureOutlook: 'booming', automationRisk: 15,
-      salaryPotential: { entryLevel: { min: 60000, max: 85000 }, midLevel: { min: 85000, max: 130000 }, seniorLevel: { min: 130000, max: 200000 }, currency: 'USD' },
-      requiredDegrees: [{ level: 'bachelor', field: 'Computer Science or Bootcamp' }],
-      certifications: [{ name: 'AWS Developer Associate', issuer: 'Amazon', estimatedPrepTime: '3 months' }],
-      roles: [{ title: 'Junior Developer', level: 'junior' }, { title: 'Full Stack Developer', level: 'mid' }, { title: 'Tech Lead', level: 'lead' }],
       pathwaySteps: [
-        { step: 1, title: 'HTML/CSS/JS Mastery', durationMonths: 2, description: 'Solidify web fundamentals.' },
-        { step: 2, title: 'React & Frontend', durationMonths: 2, description: 'Component patterns and state management.' },
-        { step: 3, title: 'Backend & APIs', durationMonths: 2, description: 'Node.js, Express, MongoDB.' },
-        { step: 4, title: 'First Job', durationMonths: 2, description: 'Portfolio projects and applications.' },
-      ],
-    },
-  },
-  {
-    matchScore: 64, confidenceLevel: 'medium',
-    gapSkills: ['Tableau', 'R'],
-    strengths: ['SQL', 'Statistics', 'Python'],
-    estimatedTimeToReady: '4–6 months',
-    careerPath: {
-      title: 'Data Analyst', industry: 'Analytics',
-      demandLevel: 'high', growthRate: 18, futureOutlook: 'growing', automationRisk: 25,
-      salaryPotential: { entryLevel: { min: 50000, max: 70000 }, midLevel: { min: 70000, max: 100000 }, seniorLevel: { min: 100000, max: 140000 }, currency: 'USD' },
-      requiredDegrees: [{ level: 'bachelor', field: 'Statistics or Business' }],
-      certifications: [{ name: 'Google Data Analytics', issuer: 'Google', estimatedPrepTime: '6 months' }],
-      roles: [{ title: 'Junior Analyst', level: 'junior' }, { title: 'Data Analyst', level: 'mid' }, { title: 'Lead Analyst', level: 'lead' }],
-      pathwaySteps: [
-        { step: 1, title: 'SQL & Excel', durationMonths: 2, description: 'Core data querying and analysis.' },
-        { step: 2, title: 'Python & Statistics', durationMonths: 2, description: 'pandas, numpy, hypothesis testing.' },
-        { step: 3, title: 'Visualization', durationMonths: 2, description: 'Tableau and Power BI dashboards.' },
-        { step: 4, title: 'Portfolio & Certification', durationMonths: 2, description: 'Google cert and first applications.' },
+        { step: 1, title: 'Data and Python Foundation', durationMonths: 2, description: 'Learn Python, pandas, SQL, statistics, and model evaluation.' },
+        { step: 2, title: 'Build Practical ML Projects', durationMonths: 3, description: 'Create models tied to agriculture, education, finance, or health.' },
+        { step: 3, title: 'Deploy a Customer Demo', durationMonths: 2, description: 'Wrap the model in an API and dashboard with a measurable business metric.' },
+        { step: 4, title: 'Pilot and Commercialize', durationMonths: 3, description: 'Run a pilot and refine pricing from user feedback.' },
       ],
     },
   },
 ]
 
-// ── Helpers ───────────────────────────────────────────────────────
-const SCORE_COLORS = { 'very-high': '#00ff88', high: '#00d4ff', medium: '#a855f7', low: '#ff006e' }
-const fmt = (n) => `$${(n / 1000).toFixed(0)}k`
+const SCORE_COLORS = { 'very-high': '#00ff88', high: '#00d4ff', medium: '#f59e0b', low: '#ff006e' }
+const fmtLkr = (value = 0) => `LKR ${(value / 1000).toFixed(0)}k`
 
-const useTooltipStyle = () => ({
-  contentStyle: { background: '#0d1117', border: '1px solid rgba(0,212,255,0.2)', borderRadius: '10px', color: '#e2e8f0', fontSize: '0.78rem' },
-  labelStyle: { color: '#94a3b8' },
-})
-
-// ── Match Score Ring ──────────────────────────────────────────────
-const ScoreRing = ({ score, color, size = 80 }) => {
-  const r = size / 2 - 7
-  const circ = 2 * Math.PI * r
-  const offset = circ - (score / 100) * circ
+const ScoreRing = ({ score, color }) => {
+  const radius = 35
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (score / 100) * circumference
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="6"
-          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 1.2s ease', filter: `drop-shadow(0 0 6px ${color}80)` }} />
+    <div style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
+      <svg width="88" height="88" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="44" cy="44" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
+        <circle cx="44" cy="44" r={radius} fill="none" stroke={color} strokeWidth="7" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" />
       </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span className="font-display" style={{ fontSize: size > 70 ? '1.25rem' : '0.9rem', fontWeight: 900, color }}>{score}%</span>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color, fontWeight: 900 }}>
+        {score}%
       </div>
     </div>
   )
 }
 
-// ── Roadmap Timeline ──────────────────────────────────────────────
-const Roadmap = ({ career }) => {
-  const phases = [
-    {
-      icon: '🎓', label: 'EDUCATION', color: '#00d4ff',
-      items: career.requiredDegrees.map(d => `${d.level.charAt(0).toUpperCase() + d.level.slice(1)}'s in ${d.field}`),
-    },
-    {
-      icon: '📜', label: 'CERTIFICATIONS', color: '#a855f7',
-      items: career.certifications.map(c => `${c.name} (${c.issuer}) · ${c.estimatedPrepTime}`),
-    },
-    {
-      icon: '💼', label: 'FIRST ROLE', color: '#00ff88',
-      items: [career.roles.find(r => r.level === 'junior' || r.level === 'entry')?.title || career.roles[0]?.title || ''],
-    },
-    ...career.pathwaySteps.map((s, i) => ({
-      icon: `${s.step}`, label: `PHASE ${s.step}: ${s.title.toUpperCase()}`, color: '#f59e0b',
-      items: [s.description, `Duration: ${s.durationMonths} months`],
-    })),
-  ]
-
-  return (
-    <div style={{ position: 'relative', paddingLeft: '2rem' }}>
-      <div style={{ position: 'absolute', left: '11px', top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg,#00d4ff,#7c3aed,#00ff88)', opacity: 0.3 }} />
-      {phases.map((phase, i) => (
-        <div key={i} style={{ position: 'relative', marginBottom: '1.5rem' }}>
-          <div style={{ position: 'absolute', left: '-1.85rem', top: '0.1rem', width: '22px', height: '22px', borderRadius: '50%', background: phase.color + '20', border: `2px solid ${phase.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: phase.color, fontWeight: 700 }}>
-            {i + 1}
-          </div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: phase.color, letterSpacing: '0.1em', marginBottom: '0.4rem' }}>{phase.label}</div>
-          {phase.items.map((item, j) => item && (
-            <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <FiCheckCircle size={12} color={phase.color} style={{ flexShrink: 0, marginTop: '2px', opacity: 0.7 }} />
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>{item}</span>
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Salary Chart ──────────────────────────────────────────────────
 const SalaryChart = ({ predictions }) => {
-  const tooltipStyle = useTooltipStyle()
-  const data = predictions.map(p => ({
-    name: p.careerPath.title.split(' ').slice(0, 2).join(' '),
-    Entry: Math.round((p.careerPath.salaryPotential.entryLevel.min + p.careerPath.salaryPotential.entryLevel.max) / 2),
-    Mid: Math.round((p.careerPath.salaryPotential.midLevel.min + p.careerPath.salaryPotential.midLevel.max) / 2),
-    Senior: Math.round((p.careerPath.salaryPotential.seniorLevel.min + p.careerPath.salaryPotential.seniorLevel.max) / 2),
+  const data = predictions.map(pred => ({
+    name: pred.careerPath.title.split(' ').slice(0, 2).join(' '),
+    Entry: Math.round((pred.careerPath.salaryPotential.entryLevel.min + pred.careerPath.salaryPotential.entryLevel.max) / 2),
+    Mid: Math.round((pred.careerPath.salaryPotential.midLevel.min + pred.careerPath.salaryPotential.midLevel.max) / 2),
+    Senior: Math.round((pred.careerPath.salaryPotential.seniorLevel.min + pred.careerPath.salaryPotential.seniorLevel.max) / 2),
   }))
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} barGap={4} barCategoryGap="30%">
-        <XAxis dataKey="name" tick={{ fill: '#475569', fontSize: 11 }} axisLine={false} tickLine={false} />
-        <YAxis tickFormatter={fmt} tick={{ fill: '#475569', fontSize: 10 }} axisLine={false} tickLine={false} />
-        <Tooltip {...tooltipStyle} formatter={(v) => [`$${v.toLocaleString()}`, '']} />
-        <Bar dataKey="Entry" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Entry Level" />
-        <Bar dataKey="Mid" fill="#00d4ff" radius={[4, 4, 0, 0]} name="Mid Level" />
-        <Bar dataKey="Senior" fill="#00ff88" radius={[4, 4, 0, 0]} name="Senior Level" />
+    <ResponsiveContainer width="100%" height={230}>
+      <BarChart data={data}>
+        <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis tickFormatter={fmtLkr} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+        <Tooltip
+          contentStyle={{ background: '#0d1117', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 8, color: '#e2e8f0' }}
+          formatter={(value) => [fmtLkr(value), 'Monthly estimate']}
+        />
+        <Bar dataKey="Entry" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="Mid" fill="#00d4ff" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="Senior" fill="#00ff88" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────
+const InfoList = ({ icon: Icon, title, items, color = '#00d4ff' }) => (
+  <div className="glass-card" style={{ padding: '1.25rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.85rem' }}>
+      <Icon size={17} color={color} />
+      <h3 style={{ fontSize: '0.95rem', color: '#e2e8f0', fontWeight: 800 }}>{title}</h3>
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+      {items?.filter(Boolean).map(item => (
+        <div key={item} style={{ display: 'flex', gap: '0.5rem', color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.45 }}>
+          <FiCheckCircle size={13} color={color} style={{ marginTop: 3, flexShrink: 0 }} />
+          <span>{item}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
 const ResultsDashboard = () => {
   const [predictions, setPredictions] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(0)
-  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     const load = async () => {
       const token = localStorage.getItem('token')
-      if (!token) { setPredictions(DEMO); setLoading(false); return }
+      if (!token) {
+        setPredictions(DEMO)
+        setNotice('Showing a judge-ready sample. Complete the assessment for your own match.')
+        setLoading(false)
+        return
+      }
+
       try {
         const res = await fetch('/api/careers/predicted', { headers: { Authorization: `Bearer ${token}` } })
         const json = await res.json()
-        if (json.success && json.data?.length) setPredictions(json.data.slice(0, 3))
-        else { setPredictions(DEMO); setError('Using demo data — complete an assessment for real predictions.') }
-      } catch { setPredictions(DEMO); setError('Backend offline — showing demo data.') }
+        if (json.success && json.data?.length) setPredictions(json.data.slice(0, 5))
+        else {
+          setPredictions(DEMO)
+          setNotice('No assessment found yet, so this page is showing sample market data.')
+        }
+      } catch {
+        setPredictions(DEMO)
+        setNotice('Backend is offline, so this page is showing sample market data.')
+      }
       setLoading(false)
     }
     load()
   }, [])
 
-  if (loading) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '1rem' }}>
-      <div style={{ width: '48px', height: '48px', border: '3px solid rgba(0,212,255,0.15)', borderTopColor: '#00d4ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <p style={{ color: '#475569' }}>Loading your career predictions...</p>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh', color: '#64748b' }}>
+        Loading career intelligence...
+      </div>
+    )
+  }
 
-  const active = predictions[selected]
+  const active = predictions[selected] || predictions[0]
   const cp = active?.careerPath
+  const prototype = cp?.prototypeIdeas?.[0]
 
   return (
     <div className="section-pad" style={{ position: 'relative', zIndex: 1 }}>
       <div className="container-max">
-
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <div className="badge badge-cyan" style={{ display: 'inline-flex', margin: '0 auto 1rem' }}>AI Predictions</div>
-          <h1 className="font-display" style={{ fontSize: 'clamp(1.75rem,4vw,2.75rem)', fontWeight: 900, color: '#e2e8f0', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-            Your Career <span className="gradient-text-cyan">Pathway Results</span>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div className="badge badge-cyan" style={{ display: 'inline-flex', marginBottom: '1rem' }}>Market-backed results</div>
+          <h1 className="font-display" style={{ fontSize: 'clamp(1.8rem,4vw,2.9rem)', fontWeight: 900, color: '#e2e8f0', marginBottom: '0.75rem' }}>
+            Skill-to-Career <span className="gradient-text-cyan">Commercial Pathway</span>
           </h1>
-          <p style={{ color: '#64748b', maxWidth: '480px', margin: '0 auto' }}>AI-analyzed predictions based on your skills, interests & GitHub activity</p>
-          {error && <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', padding: '0.5rem 1rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', fontSize: '0.78rem', color: '#f59e0b' }}>{error}</div>}
+          <p style={{ color: '#94a3b8', maxWidth: 680, margin: '0 auto' }}>
+            Recommendations combine readiness, Sri Lankan market demand, salary potential, employer types, and a science-to-business prototype angle.
+          </p>
+          {notice && <div style={{ marginTop: '1rem', color: '#f59e0b', fontSize: '0.8rem' }}>{notice}</div>}
         </div>
 
-        {/* Top 3 Career Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-          {predictions.map((pred, i) => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          {predictions.map((pred, index) => {
             const color = SCORE_COLORS[pred.confidenceLevel] || '#00d4ff'
-            const isActive = selected === i
+            const selectedCard = selected === index
             return (
-              <button key={i} onClick={() => setSelected(i)} style={{
-                all: 'unset', cursor: 'pointer', display: 'block',
-                padding: '1.75rem', borderRadius: '16px',
-                background: isActive ? `rgba(0,0,0,0.5)` : 'rgba(6,13,24,0.7)',
-                border: `1px solid ${isActive ? color : 'rgba(0,212,255,0.1)'}`,
-                boxShadow: isActive ? `0 0 30px ${color}20` : 'none',
-                transition: 'all 0.3s ease',
-                position: 'relative', overflow: 'hidden',
-              }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(0,212,255,0.3)' }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(0,212,255,0.1)' }}>
-
-                {/* Rank badge */}
-                <div style={{ position: 'absolute', top: '1rem', right: '1rem', width: '28px', height: '28px', borderRadius: '50%', background: i === 0 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${i === 0 ? '#f59e0b' : 'rgba(255,255,255,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: i === 0 ? '#f59e0b' : '#475569' }}>#{i + 1}</div>
-
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.25rem' }}>
-                  <ScoreRing score={pred.matchScore} color={color} size={72} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.25rem', lineHeight: 1.3 }}>{pred.careerPath?.title}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.5rem' }}>{pred.careerPath?.industry}</div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.2rem 0.6rem', borderRadius: '20px', background: `${color}15`, border: `1px solid ${color}30`, fontSize: '0.65rem', color, fontWeight: 700 }}>
-                      {pred.confidenceLevel?.replace('-', ' ').toUpperCase()} MATCH
+              <button
+                key={pred.careerPath?.title || index}
+                onClick={() => setSelected(index)}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  padding: '1.25rem',
+                  borderRadius: 8,
+                  background: selectedCard ? 'rgba(0,212,255,0.08)' : 'rgba(6,13,24,0.72)',
+                  border: `1px solid ${selectedCard ? color : 'rgba(0,212,255,0.12)'}`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                  <ScoreRing score={pred.matchScore} color={color} />
+                  <div>
+                    <div style={{ color: '#e2e8f0', fontWeight: 800, lineHeight: 1.25, marginBottom: '0.35rem' }}>{pred.careerPath?.title}</div>
+                    <div style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: '0.65rem' }}>{pred.careerPath?.industry}</div>
+                    <div className="badge" style={{ color, border: `1px solid ${color}40`, background: `${color}15` }}>
+                      {pred.confidenceLevel?.replace('-', ' ')} confidence
                     </div>
-                  </div>
-                </div>
-
-                {/* Stats row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.625rem', marginBottom: '1rem' }}>
-                  {[
-                    { label: 'Growth', value: `${pred.careerPath?.growthRate}%`, icon: FiTrendingUp },
-                    { label: 'Demand', value: pred.careerPath?.demandLevel?.replace('-', ' '), icon: FiAward },
-                    { label: 'To Ready', value: pred.estimatedTimeToReady?.split('–')[0] + '+mo', icon: FiRefreshCw },
-                  ].map(({ label, value, icon: Icon }) => (
-                    <div key={label} style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(0,212,255,0.04)', borderRadius: '8px', border: '1px solid rgba(0,212,255,0.08)' }}>
-                      <Icon size={12} color="#475569" />
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginTop: '0.2rem' }}>{value}</div>
-                      <div style={{ fontSize: '0.6rem', color: '#334155' }}>{label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Strengths */}
-                <div>
-                  <div style={{ fontSize: '0.65rem', color: '#334155', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Your Strengths</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {pred.strengths?.slice(0, 3).map(s => (
-                      <span key={s} style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '20px', color: '#00ff88' }}>{s}</span>
-                    ))}
                   </div>
                 </div>
               </button>
@@ -272,98 +207,115 @@ const ResultsDashboard = () => {
           })}
         </div>
 
-        {/* Detail Section */}
         {cp && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,0.9fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-
-            {/* Left: Roadmap */}
-            <div className="glass-card" style={{ padding: '1.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <FiBookOpen size={18} color="#00d4ff" />
-                </div>
-                <div>
-                  <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.1rem' }}>Dynamic Roadmap</h2>
-                  <p style={{ fontSize: '0.72rem', color: '#475569' }}>{cp.title} · End-to-end pathway</p>
-                </div>
-              </div>
-              <Roadmap career={cp} />
-            </div>
-
-            {/* Right: Salary + Gap */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-              {/* Salary card */}
-              <div className="glass-card" style={{ padding: '1.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FiDollarSign size={18} color="#00ff88" />
-                  </div>
-                  <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0' }}>Salary Potential</h2>
-                </div>
-
-                {/* Salary tiers */}
-                {[
-                  { label: 'Entry Level', data: cp.salaryPotential.entryLevel, color: '#7c3aed' },
-                  { label: 'Mid Level', data: cp.salaryPotential.midLevel, color: '#00d4ff' },
-                  { label: 'Senior Level', data: cp.salaryPotential.seniorLevel, color: '#00ff88' },
-                ].map(({ label, data, color }) => (
-                  <div key={label} style={{ marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                      <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{label}</span>
-                      <span className="font-display" style={{ fontSize: '0.85rem', color, fontWeight: 700 }}>{fmt(data.min)} – {fmt(data.max)}</span>
-                    </div>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.04)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${(data.max / (cp.salaryPotential.seniorLevel.max || 1)) * 100}%`, background: color, borderRadius: '3px', opacity: 0.8 }} />
-                    </div>
-                  </div>
-                ))}
-
-                <div style={{ marginTop: '0.5rem', padding: '0.625rem', background: 'rgba(0,255,136,0.06)', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.15)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.65rem', color: '#475569', marginBottom: '0.2rem' }}>PEAK EARNING POTENTIAL</div>
-                  <div className="font-display" style={{ fontSize: '1.5rem', fontWeight: 900, color: '#00ff88' }}>
-                    {fmt(cp.salaryPotential.seniorLevel.max)}
-                    <span style={{ fontSize: '0.75rem', color: '#475569', fontFamily: 'inherit' }}>/yr</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Skill Gap */}
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.15fr) minmax(320px,0.85fr)', gap: '1rem', marginBottom: '1rem' }}>
               <div className="glass-card" style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '1rem' }}>Skills Gap to Bridge</h3>
-                {predictions[selected]?.gapSkills?.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {predictions[selected].gapSkills.map(s => (
-                      <span key={s} style={{ fontSize: '0.72rem', padding: '0.3rem 0.7rem', background: 'rgba(255,0,110,0.08)', border: '1px solid rgba(255,0,110,0.2)', borderRadius: '20px', color: '#ff6b9d' }}>+ {s}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                  <div>
+                    <h2 style={{ color: '#e2e8f0', fontSize: '1.25rem', fontWeight: 900 }}>{cp.title}</h2>
+                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', maxWidth: 720, marginTop: '0.4rem' }}>{cp.marketSignal?.evidenceSummary}</p>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(80px,1fr))', gap: '0.65rem', minWidth: 300 }}>
+                    {[
+                      { label: 'Local demand', value: `${cp.marketSignal?.sriLankaDemandScore || 0}/100`, icon: FiTrendingUp },
+                      { label: 'Growth', value: `${cp.growthRate}%`, icon: FiAward },
+                      { label: 'Ready in', value: active.estimatedTimeToReady, icon: FiTarget },
+                    ].map(({ label, value, icon: Icon }) => (
+                      <div key={label} style={{ padding: '0.7rem', border: '1px solid rgba(0,212,255,0.1)', borderRadius: 8, background: 'rgba(0,212,255,0.04)' }}>
+                        <Icon size={14} color="#00d4ff" />
+                        <div style={{ color: '#e2e8f0', fontWeight: 800, fontSize: '0.9rem', marginTop: 4 }}>{value}</div>
+                        <div style={{ color: '#64748b', fontSize: '0.66rem' }}>{label}</div>
+                      </div>
                     ))}
                   </div>
-                ) : <p style={{ fontSize: '0.8rem', color: '#00ff88' }}>✓ You already have all required skills!</p>}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: '0.9rem' }}>
+                  <InfoList icon={FiBriefcase} title="Likely Customers" items={cp.marketSignal?.employerTypes} />
+                  <InfoList icon={FiTarget} title="Business Use Cases" items={cp.marketSignal?.businessUseCases} color="#00ff88" />
+                  <InfoList icon={FiCheckCircle} title="Your Strengths" items={active.strengths} color="#a855f7" />
+                  <InfoList icon={FiBookOpen} title="Skill Gaps" items={active.gapSkills?.length ? active.gapSkills : ['No major gaps detected']} color="#f59e0b" />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="glass-card" style={{ padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+                    <FiDollarSign color="#00ff88" />
+                    <h3 style={{ color: '#e2e8f0', fontWeight: 800 }}>Monthly Salary Estimate</h3>
+                  </div>
+                  {[
+                    ['Entry', cp.salaryPotential.entryLevel, '#7c3aed'],
+                    ['Mid', cp.salaryPotential.midLevel, '#00d4ff'],
+                    ['Senior', cp.salaryPotential.seniorLevel, '#00ff88'],
+                  ].map(([label, band, color]) => (
+                    <div key={label} style={{ marginBottom: '0.8rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.82rem' }}>
+                        <span>{label}</span>
+                        <strong style={{ color }}>{fmtLkr(band.min)} - {fmtLkr(band.max)}</strong>
+                      </div>
+                      <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 999, marginTop: 5 }}>
+                        <div style={{ width: `${Math.min(100, (band.max / cp.salaryPotential.seniorLevel.max) * 100)}%`, height: '100%', borderRadius: 999, background: color }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {prototype && (
+                  <div className="glass-card" style={{ padding: '1.25rem' }}>
+                    <div className="badge badge-green" style={{ marginBottom: '0.8rem' }}>Prototype Pitch</div>
+                    <h3 style={{ color: '#e2e8f0', fontWeight: 900, marginBottom: '0.55rem' }}>{prototype.title}</h3>
+                    <p style={{ color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.5 }}>{prototype.scientificPrinciple}</p>
+                    <div style={{ marginTop: '0.85rem', color: '#64748b', fontSize: '0.78rem', lineHeight: 1.65 }}>
+                      Customer: {prototype.targetCustomer}<br />
+                      Build cost: {fmtLkr(prototype.buildCostLkr)}<br />
+                      Revenue: {prototype.revenueModel}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(280px,0.8fr)', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="glass-card" style={{ padding: '1.25rem' }}>
+                <h3 style={{ color: '#e2e8f0', fontWeight: 800, marginBottom: '0.45rem' }}>LKR Salary Comparison</h3>
+                <p style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: '1rem' }}>Monthly gross estimates by career level, for local market planning.</p>
+                <SalaryChart predictions={predictions} />
+              </div>
+
+              <div className="glass-card" style={{ padding: '1.25rem' }}>
+                <h3 style={{ color: '#e2e8f0', fontWeight: 800, marginBottom: '0.85rem' }}>Market Sources</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {cp.marketSignal?.dataSources?.map(source => (
+                    <a key={source.url || source.label} href={source.url} target="_blank" rel="noopener noreferrer" style={{ color: '#00d4ff', textDecoration: 'none', fontSize: '0.78rem', display: 'flex', gap: '0.45rem', alignItems: 'flex-start' }}>
+                      <FiExternalLink size={13} style={{ marginTop: 3, flexShrink: 0 }} />
+                      {source.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ color: '#e2e8f0', fontWeight: 800, marginBottom: '1rem' }}>Practical Roadmap</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '0.9rem' }}>
+                {cp.pathwaySteps?.map(step => (
+                  <div key={step.step} style={{ border: '1px solid rgba(0,212,255,0.1)', borderRadius: 8, padding: '1rem', background: 'rgba(0,212,255,0.035)' }}>
+                    <div style={{ color: '#00d4ff', fontWeight: 900, fontSize: '0.75rem', marginBottom: '0.4rem' }}>PHASE {step.step} - {step.durationMonths} MONTHS</div>
+                    <h4 style={{ color: '#e2e8f0', fontWeight: 800, marginBottom: '0.35rem' }}>{step.title}</h4>
+                    <p style={{ color: '#94a3b8', fontSize: '0.8rem', lineHeight: 1.5 }}>{step.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Salary Comparison Chart */}
-        <div className="glass-card" style={{ padding: '1.75rem', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.5rem' }}>Salary Comparison Across Paths</h2>
-          <p style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '1.5rem' }}>Average salary by career level (USD)</p>
-          <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', marginBottom: '1rem' }}>
-            {[{color:'#7c3aed',label:'Entry'},{color:'#00d4ff',label:'Mid'},{color:'#00ff88',label:'Senior'}].map(({color,label}) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: color }} />
-                <span style={{ fontSize: '0.72rem', color: '#475569' }}>{label}</span>
-              </div>
-            ))}
-          </div>
-          <SalaryChart predictions={predictions} />
-        </div>
-
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <a href="/assessment" className="btn-secondary">Retake Assessment</a>
-          <a href="/simulation" className="btn-primary">Run Career Simulation →</a>
+          <a href="/simulation" className="btn-primary">Run Simulation</a>
         </div>
-
       </div>
     </div>
   )
