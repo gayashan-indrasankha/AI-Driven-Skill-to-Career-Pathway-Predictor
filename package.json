@@ -9,7 +9,8 @@
     "client": "npm run dev --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "npm run build --prefix client",
-    "install-all": "npm install && npm install --prefix client"
+    "install-all": "npm install && npm install --prefix client",
+    "seed": "node server/scripts/seedCareers.js"
   },
   "keywords": ["AI", "career", "skills", "MERN", "pathway"],
   "author": "",
