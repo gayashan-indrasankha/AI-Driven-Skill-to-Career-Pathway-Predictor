@@ -96,7 +96,7 @@ const assessmentSchema = new mongoose.Schema(
       style: { type: String, enum: ['remote', 'hybrid', 'on-site', 'flexible', ''] },
       teamSize: { type: String, enum: ['solo', 'small', 'medium', 'large', 'any', ''] },
       industry: [{ type: String }],
-      salaryExpectation: { min: Number, max: Number, currency: { type: String, default: 'USD' } },
+      salaryExpectation: { min: Number, max: Number, currency: { type: String, default: 'LKR' } },
     },
 
     // ── AI Predictions ────────────────────────────────────────────

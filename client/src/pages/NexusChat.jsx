@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { FiSend, FiTrash2, FiZap, FiUser, FiRefreshCw } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 
+const AI_NAME = 'PathGuide AI'
+
 // ── Markdown-lite renderer ────────────────────────────────────────
 const renderText = (text) => {
   const lines = text.split('\n')
@@ -26,18 +28,18 @@ const TypingDots = () => (
     {[0, 1, 2].map(i => (
       <div key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'linear-gradient(135deg,#00d4ff,#7c3aed)', animation: `nexusBounce 1.2s ease ${i * 0.18}s infinite` }} />
     ))}
-    <span style={{ fontSize: '0.7rem', color: '#334155', marginLeft: '0.5rem' }}>Nexus AI is thinking...</span>
+    <span style={{ fontSize: '0.7rem', color: '#334155', marginLeft: '0.5rem' }}>{AI_NAME} is preparing guidance...</span>
   </div>
 )
 
 // ── Suggested prompts ─────────────────────────────────────────────
 const SUGGESTIONS = [
-  '🚀 What skills do I need for ML Engineering?',
-  '💻 Give me a roadmap to become a Full Stack Developer',
-  '🧠 Analyze my assessment results and suggest next steps',
-  '📈 Which tech careers have the highest growth in 2025?',
-  '⚡ What certifications should I get first?',
-  '🎯 How do I transition from Data Analyst to Data Scientist?',
+  'What skills do I need for ML engineering?',
+  'Build a roadmap for a school dropout dashboard',
+  'Analyze my assessment results and suggest next steps',
+  'Which Sri Lankan tech career has the best LKR potential?',
+  'What certification should I get first?',
+  'How can I turn my prototype into a business pitch?',
 ]
 
 // ── Message bubble ────────────────────────────────────────────────
@@ -92,7 +94,7 @@ const NexusChat = () => {
     // Welcome message
     setMessages([{
       role: 'assistant',
-      content: `Hey there! I'm **Nexus AI** — your personal career navigator. 🚀\n\nI'm trained to help you:\n- Explore high-demand **tech careers**\n- Build personalized **learning roadmaps**\n- Understand your **assessment results**\n- Find the right **certifications** to level up\n\nWhat career question is on your mind today?`,
+      content: `Hey there! I'm **${AI_NAME}** - your practical career and project pitch advisor.\n\nI can help you:\n- Explore Sri Lankan tech careers with **LKR salary signals**\n- Build personalized **learning roadmaps**\n- Understand your **assessment results**\n- Turn a prototype into a **Science-to-Business pitch**\n\nWhat career or project question is on your mind today?`,
       time: Date.now(),
     }])
   }, [])
@@ -149,7 +151,7 @@ const NexusChat = () => {
     setGuestHistory([])
     setMessages([{
       role: 'assistant',
-      content: `Conversation cleared! 🧠 Ready for a fresh start. What would you like to explore?`,
+      content: `Conversation cleared. Ready for a fresh start. What would you like to explore?`,
       time: Date.now(),
     }])
   }
@@ -173,11 +175,11 @@ const NexusChat = () => {
               <div style={{ position: 'absolute', bottom: '-3px', right: '-3px', width: '12px', height: '12px', borderRadius: '50%', background: '#00ff88', border: '2px solid #020408', boxShadow: '0 0 8px #00ff88' }} />
             </div>
             <div>
-              <h1 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, background: 'linear-gradient(135deg,#00d4ff,#7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.01em', marginBottom: '0.1rem' }}>Nexus AI</h1>
+              <h1 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, background: 'linear-gradient(135deg,#00d4ff,#7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.01em', marginBottom: '0.1rem' }}>{AI_NAME}</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 6px #00ff88' }} />
-                <span style={{ fontSize: '0.7rem', color: '#475569' }}>Career Consultant · Online</span>
-                {!isAuth && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '0.25rem' }}>· Guest Mode (5 msg limit)</span>}
+                <span style={{ fontSize: '0.7rem', color: '#475569' }}>Career & Pitch Advisor - Online</span>
+                {!isAuth && <span style={{ fontSize: '0.65rem', color: '#f59e0b', marginLeft: '0.25rem' }}>- Guest mode</span>}
               </div>
             </div>
           </div>
@@ -196,7 +198,7 @@ const NexusChat = () => {
           {loading && <TypingDots />}
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', background: 'rgba(255,0,110,0.08)', border: '1px solid rgba(255,0,110,0.2)', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.8rem', color: '#ff6b9d' }}>
-              ⚠️ {error.includes('busy') || error.includes('rate') ? '🔄 AI is momentarily busy. Please wait a few seconds and try again.' : error}
+              {error.includes('busy') || error.includes('rate') ? `${AI_NAME} could not connect to the advisor service. Please try again.` : error}
               {(error.includes('busy') || error.includes('rate')) && (
                 <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#00d4ff', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Dismiss</button>
               )}
@@ -229,7 +231,7 @@ const NexusChat = () => {
               ref={inputRef}
               className="input-futuristic"
               rows={2}
-              placeholder="Ask Nexus AI anything about your career path..."
+              placeholder={`Ask ${AI_NAME} about your career path, skills, or project pitch...`}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
@@ -248,7 +250,7 @@ const NexusChat = () => {
           </button>
         </div>
         <p style={{ fontSize: '0.68rem', color: '#1e293b', textAlign: 'center', marginTop: '0.625rem' }}>
-          Press Enter to send · Shift+Enter for new line · {isAuth ? 'Personalized with your assessment data 🧠' : 'Sign in for personalized AI advice'}
+          Press Enter to send - Shift+Enter for new line - {isAuth ? 'Personalized with your assessment data' : 'Sign in for personalized guidance'}
         </p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>

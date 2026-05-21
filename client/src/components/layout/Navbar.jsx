@@ -11,7 +11,7 @@ const navLinks = [
   { to: '/assessment', label: 'Assessment' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/simulation', label: 'Simulation' },
-  { to: '/nexus', label: 'Nexus AI' },
+  { to: '/nexus', label: 'PathGuide AI' },
 ]
 
 const Navbar = () => {
@@ -80,7 +80,7 @@ const Navbar = () => {
               {navLinks.map(({ to, label }) => (
                 <li key={to}>
                   <NavLink to={to} end={to === '/'} style={({ isActive }) => navLinkStyle(isActive)}>
-                    {label === 'Nexus AI' && <FiZap size={13} style={{ marginRight: '0.25rem' }} />}
+                    {label === 'PathGuide AI' && <FiZap size={13} style={{ marginRight: '0.25rem' }} />}
                     {label}
                   </NavLink>
                 </li>

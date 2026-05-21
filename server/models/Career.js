@@ -6,7 +6,7 @@ const careerSchema = new mongoose.Schema(
     description: { type: String, required: true },
     industry: { type: String, required: true },
     requiredSkills: [{ skill: { type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }, importance: { type: Number, min: 1, max: 5 } }],
-    averageSalary: { min: Number, max: Number, currency: { type: String, default: 'USD' } },
+    averageSalary: { min: Number, max: Number, currency: { type: String, default: 'LKR' } },
     growthRate: { type: Number, default: 0 },
     demandLevel: { type: String, enum: ['low', 'medium', 'high', 'very-high'], default: 'medium' },
     workType: { type: String, enum: ['remote', 'hybrid', 'on-site', 'flexible'], default: 'hybrid' },

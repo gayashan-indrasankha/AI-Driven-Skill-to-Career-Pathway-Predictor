@@ -43,4 +43,4 @@ CLIENT_URL=http://localhost:5173
 2. Complete the assessment with skills like Python, SQL, Data Analysis, IoT, or Security.
 3. Show the results dashboard: match score, skill gaps, Sri Lankan demand score, LKR salary bands, sources, and business use cases.
 4. Open the prototype pitch card and explain the scientific principle, target customer, estimated build cost, and revenue model.
-5. End with the roadmap showing how a student can move from learning to pilot to commercialization.
+5. Run the Career Commercial Simulator to show LKR monthly salary projection, LKR prototype investment, break-even period, skill gaps, and a month-by-month plan from learning to pilot to commercialization.
