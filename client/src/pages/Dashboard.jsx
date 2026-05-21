@@ -16,6 +16,8 @@ const DEMO = {
   ],
 }
 
+const fmtShortLkr = (value = 0) => `LKR ${Math.round((value || 0) / 1000)}k`
+
 const StatCard = ({ icon: Icon, label, value, sub, color, loading }) => (
   <div className="glass-card" style={{ padding: '1.5rem' }}>
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -61,7 +63,7 @@ const Dashboard = () => {
           title: c.title,
           match: assessmentJson?.data?.predictedCareers?.[i]?.matchScore || Math.round(90 - i * 8),
           industry: c.industry,
-          salary: `$${Math.round(c.salaryPotential?.midLevel?.min / 1000)}K–$${Math.round(c.salaryPotential?.midLevel?.max / 1000)}K`,
+          salary: `${fmtShortLkr(c.salaryPotential?.midLevel?.min)}-${fmtShortLkr(c.salaryPotential?.midLevel?.max)}`,
           growth: `+${c.growthRate}%`,
           color: COLORS[i],
         }))
@@ -86,7 +88,7 @@ const Dashboard = () => {
         careers,
         skills: skillRatings.map(s => ({ name: s.name, level: s.proficiency || 3, category: s.category || 'Technical' })),
         nextSteps: [
-          { step: careers[0] ? `Pursue ${careers[0].title} — your top match` : 'Complete Assessment for personalized matches', icon: MdOutlineSchool, color: '#00d4ff' },
+          { step: careers[0] ? `Pursue ${careers[0].title} - your top match` : 'Complete Assessment for personalized matches', icon: MdOutlineSchool, color: '#00d4ff' },
           { step: assessment?.gapSkills?.length ? `Bridge skill gaps: ${assessment.gapSkills.slice(0,2).join(', ')}` : 'Connect GitHub to detect your skills automatically', icon: HiLightningBolt, color: '#7c3aed' },
           { step: 'Run Career Simulation for your top matched path', icon: HiTrendingUp, color: '#00ff88' },
         ],
@@ -236,7 +238,7 @@ const Dashboard = () => {
         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', flexWrap: 'wrap' }}>
           <a href="/assessment" className="btn-secondary" style={{ fontSize: '0.85rem' }}>Take Assessment</a>
           <a href="/results" className="btn-primary" style={{ fontSize: '0.85rem' }}>View Full Results</a>
-          <a href="/nexus" className="btn-secondary" style={{ fontSize: '0.85rem', borderColor: 'rgba(124,58,237,0.4)', color: '#a855f7' }}>Ask Nexus AI</a>
+          <a href="/nexus" className="btn-secondary" style={{ fontSize: '0.85rem', borderColor: 'rgba(124,58,237,0.4)', color: '#a855f7' }}>Ask PathGuide AI</a>
         </div>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>

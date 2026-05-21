@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { FiAward, FiBookOpen, FiBriefcase, FiCheckCircle, FiDollarSign, FiExternalLink, FiTarget, FiTrendingUp } from 'react-icons/fi'
+import { FiAward, FiBookOpen, FiBriefcase, FiCheckCircle, FiExternalLink, FiTarget, FiTrendingUp } from 'react-icons/fi'
+import { MdCurrencyRupee } from 'react-icons/md'
 
 const DEMO = [
   {
@@ -242,7 +243,7 @@ const ResultsDashboard = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="glass-card" style={{ padding: '1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-                    <FiDollarSign color="#00ff88" />
+                    <MdCurrencyRupee color="#00ff88" />
                     <h3 style={{ color: '#e2e8f0', fontWeight: 800 }}>Monthly Salary Estimate</h3>
                   </div>
                   {[

@@ -73,7 +73,7 @@ router.get('/predicted', protect, async (req, res) => {
       .sort({ createdAt: -1 })
       .populate({
         path: 'predictedCareers.careerPath',
-        select: 'title industry salaryPotential demandLevel growthRate workType certifications requiredDegrees pathwaySteps futureOutlook automationRisk roles marketSignal learningResources prototypeIdeas',
+        select: 'title industry salaryPotential demandLevel growthRate workType certifications requiredDegrees requiredSkills pathwaySteps futureOutlook automationRisk roles marketSignal learningResources prototypeIdeas',
       });
 
     if (!assessment) {
