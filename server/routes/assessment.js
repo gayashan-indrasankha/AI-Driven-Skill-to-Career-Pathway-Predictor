@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const { protect } = require('../middleware/auth');
 const Assessment = require('../models/Assessment');
 const User = require('../models/User');
@@ -15,32 +15,81 @@ const handleValidation = (req, res) => {
   return true;
 };
 
-// ── Simple scoring engine (rule-based, replace with ML later) ─────
+const normalise = (value = '') => value.toString().trim().toLowerCase();
+const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+
+const monthsRange = (missingSkills, averageGap) => {
+  const base = missingSkills * 5 + Math.max(0, averageGap) * 3;
+  const min = Math.max(2, Math.round(base * 0.65));
+  const max = Math.max(4, Math.round(base * 1.15));
+  return `${min}-${max} months`;
+};
+
+const getPreference = (assessment, key) => {
+  const prefs = assessment.workPreferences || {};
+  if (key === 'style') return normalise(prefs.style || assessment.workPreference || '');
+  if (key === 'industry') return (prefs.industry || []).map(normalise);
+  return '';
+};
+
 const computeCareerMatches = async (assessment) => {
   const careers = await CareerPath.find({ isActive: true }).lean();
-  const userSkillNames = assessment.skillRatings.map(s => s.name.toLowerCase());
-  const userInterests = assessment.extractedInterests.map(i => i.toLowerCase());
+  const userSkills = new Map((assessment.skillRatings || []).map(skill => [normalise(skill.name), skill]));
+  const userInterests = (assessment.extractedInterests || []).map(normalise);
+  const careerGoals = Array.isArray(assessment.careerGoals)
+    ? assessment.careerGoals.join(' ')
+    : assessment.careerGoals || '';
+  const goalText = normalise(careerGoals);
+  const preferredWorkType = getPreference(assessment, 'style');
+  const preferredIndustries = getPreference(assessment, 'industry');
 
   return careers
     .map(career => {
       const required = career.requiredSkills || [];
-      const matched = required.filter(rs =>
-        userSkillNames.includes(rs.name.toLowerCase())
-      );
-      const gaps = required
-        .filter(rs => !userSkillNames.includes(rs.name.toLowerCase()))
-        .map(rs => rs.name);
+      const totalWeight = required.reduce((sum, skill) => sum + (skill.importance || 3), 0) || 1;
+      let earnedWeight = 0;
+      let averageGap = 0;
 
-      // interest alignment bonus
-      const interestBonus = career.tags
-        ? career.tags.filter(t => userInterests.includes(t.toLowerCase())).length * 5
-        : 0;
+      const matched = [];
+      const gaps = [];
 
-      const skillScore = required.length > 0
-        ? Math.round((matched.length / required.length) * 80)
-        : 50;
+      required.forEach(requiredSkill => {
+        const userSkill = userSkills.get(normalise(requiredSkill.name));
+        const requiredLevel = requiredSkill.proficiencyRequired || 3;
+        const importance = requiredSkill.importance || 3;
 
-      const matchScore = Math.min(100, skillScore + interestBonus);
+        if (!userSkill) {
+          gaps.push(requiredSkill.name);
+          averageGap += requiredLevel;
+          return;
+        }
+
+        const proficiency = userSkill.proficiency || 1;
+        const fit = clamp(proficiency / requiredLevel, 0, 1);
+        earnedWeight += importance * fit;
+        matched.push(requiredSkill.name);
+
+        if (proficiency < requiredLevel) {
+          const gap = requiredLevel - proficiency;
+          gaps.push(`${requiredSkill.name} (raise to level ${requiredLevel})`);
+          averageGap += gap;
+        }
+      });
+
+      averageGap = gaps.length ? averageGap / gaps.length : 0;
+
+      const skillScore = (earnedWeight / totalWeight) * 58;
+      const interestHits = (career.tags || []).filter(tag => {
+        const normalizedTag = normalise(tag);
+        return userInterests.some(interest => normalizedTag.includes(interest) || interest.includes(normalizedTag));
+      }).length;
+      const interestScore = clamp(interestHits * 4, 0, 16);
+      const marketScore = ((career.marketSignal?.sriLankaDemandScore || 50) / 100) * 16;
+      const workScore = preferredWorkType && preferredWorkType === normalise(career.workType) ? 5 : 0;
+      const industryScore = preferredIndustries.some(industry => normalise(career.industry).includes(industry)) ? 3 : 0;
+      const goalScore = (career.tags || []).some(tag => goalText.includes(normalise(tag))) ? 5 : 0;
+      const matchScore = Math.round(clamp(skillScore + interestScore + marketScore + workScore + industryScore + goalScore));
+
       const confidenceLevel =
         matchScore >= 80 ? 'very-high' :
         matchScore >= 60 ? 'high' :
@@ -51,17 +100,14 @@ const computeCareerMatches = async (assessment) => {
         matchScore,
         confidenceLevel,
         gapSkills: gaps,
-        strengths: matched.map(m => m.name),
-        estimatedTimeToReady: `${Math.max(3, gaps.length * 2)}–${Math.max(6, gaps.length * 3)} months`,
+        strengths: matched,
+        estimatedTimeToReady: monthsRange(gaps.length, averageGap),
       };
     })
     .sort((a, b) => b.matchScore - a.matchScore)
-    .slice(0, 5); // top 5 matches
+    .slice(0, 5);
 };
 
-// ─────────────────────────────────────────────────────────────────
-// @POST /api/assessment  ← Submit a full assessment
-// ─────────────────────────────────────────────────────────────────
 router.post(
   '/',
   protect,
@@ -75,24 +121,29 @@ router.post(
     try {
       const payload = {
         ...req.body,
+        careerGoals: Array.isArray(req.body.careerGoals)
+          ? req.body.careerGoals
+          : req.body.careerGoals ? [req.body.careerGoals] : [],
+        workPreferences: req.body.workPreferences || {
+          style: req.body.workPreference || '',
+          industry: req.body.preferredIndustries || [],
+        },
         user: req.user.id,
         status: 'completed',
       };
 
-      // Compute AI career matches if careers exist in DB
       const assessment = new Assessment(payload);
       assessment.predictedCareers = await computeCareerMatches(assessment);
       assessment.status = 'analyzed';
       await assessment.save();
 
-      // Link assessment to user
       await User.findByIdAndUpdate(req.user.id, {
         $addToSet: { assessments: assessment._id },
         ...(payload.extractedInterests && { interests: payload.extractedInterests }),
       });
 
       const populated = await Assessment.findById(assessment._id)
-        .populate('predictedCareers.careerPath', 'title industry salaryPotential demandLevel');
+        .populate('predictedCareers.careerPath', 'title industry salaryPotential demandLevel growthRate marketSignal learningResources prototypeIdeas requiredDegrees certifications pathwaySteps futureOutlook automationRisk roles');
 
       res.status(201).json({ success: true, data: populated });
     } catch (err) {
@@ -101,13 +152,10 @@ router.post(
   }
 );
 
-// ─────────────────────────────────────────────────────────────────
-// @GET /api/assessment/my  ← All assessments for current user
-// ─────────────────────────────────────────────────────────────────
 router.get('/my', protect, async (req, res) => {
   try {
     const assessments = await Assessment.find({ user: req.user.id })
-      .populate('predictedCareers.careerPath', 'title industry salaryPotential demandLevel growthRate')
+      .populate('predictedCareers.careerPath', 'title industry salaryPotential demandLevel growthRate marketSignal')
       .sort({ createdAt: -1 });
     res.json({ success: true, count: assessments.length, data: assessments });
   } catch (err) {
@@ -115,9 +163,6 @@ router.get('/my', protect, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────
-// @GET /api/assessment/my/latest  ← Most recent assessment
-// ─────────────────────────────────────────────────────────────────
 router.get('/my/latest', protect, async (req, res) => {
   try {
     const assessment = await Assessment.findOne({ user: req.user.id })
@@ -130,10 +175,8 @@ router.get('/my/latest', protect, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────
-// @GET /api/assessment/:id  ← Single assessment by ID
-// ─────────────────────────────────────────────────────────────────
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', protect, [param('id').isMongoId()], async (req, res) => {
+  if (!handleValidation(req, res)) return;
   try {
     const assessment = await Assessment.findOne({ _id: req.params.id, user: req.user.id })
       .populate('predictedCareers.careerPath');
@@ -144,15 +187,14 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────
-// @PATCH /api/assessment/:id  ← Update draft assessment
-// ─────────────────────────────────────────────────────────────────
-router.patch('/:id', protect, async (req, res) => {
+router.patch('/:id', protect, [param('id').isMongoId()], async (req, res) => {
+  if (!handleValidation(req, res)) return;
   try {
     const assessment = await Assessment.findOne({ _id: req.params.id, user: req.user.id });
     if (!assessment) return res.status(404).json({ success: false, error: 'Assessment not found' });
-    if (assessment.status === 'analyzed')
+    if (assessment.status === 'analyzed') {
       return res.status(400).json({ success: false, error: 'Cannot modify a completed assessment' });
+    }
 
     Object.assign(assessment, req.body);
     await assessment.save();
@@ -162,10 +204,8 @@ router.patch('/:id', protect, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────
-// @POST /api/assessment/:id/reanalyze  ← Re-run career matching
-// ─────────────────────────────────────────────────────────────────
-router.post('/:id/reanalyze', protect, async (req, res) => {
+router.post('/:id/reanalyze', protect, [param('id').isMongoId()], async (req, res) => {
+  if (!handleValidation(req, res)) return;
   try {
     const assessment = await Assessment.findOne({ _id: req.params.id, user: req.user.id });
     if (!assessment) return res.status(404).json({ success: false, error: 'Assessment not found' });
@@ -176,7 +216,7 @@ router.post('/:id/reanalyze', protect, async (req, res) => {
     await assessment.save();
 
     const populated = await Assessment.findById(assessment._id)
-      .populate('predictedCareers.careerPath', 'title industry salaryPotential demandLevel');
+      .populate('predictedCareers.careerPath', 'title industry salaryPotential demandLevel growthRate marketSignal learningResources prototypeIdeas');
     res.json({ success: true, data: populated });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

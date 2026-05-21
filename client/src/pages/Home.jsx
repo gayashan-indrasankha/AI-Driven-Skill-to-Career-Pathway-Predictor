@@ -5,32 +5,32 @@ import { MdOutlineAutoGraph, MdOutlinePsychology, MdOutlineTimeline } from 'reac
 const features = [
   {
     icon: MdOutlinePsychology,
-    title: 'AI Skill Assessment',
-    description: 'Deep-dive into your skill profile with our intelligent assessment engine that maps your expertise across 500+ competencies.',
+    title: 'Evidence-Based Skill Assessment',
+    description: 'Rate practical skills, scan GitHub evidence, and map readiness against Sri Lanka-focused career requirements.',
     color: '#00d4ff',
     badge: 'Smart',
   },
   {
     icon: MdOutlineAutoGraph,
-    title: 'Career Pathway Prediction',
-    description: 'Our ML models analyze market trends and your unique profile to surface the top career paths aligned to your potential.',
+    title: 'Market-Aware Career Matching',
+    description: 'Recommendations blend skill fit with local demand, export-sector relevance, salary bands, and employer types.',
     color: '#7c3aed',
     badge: 'AI-Powered',
   },
   {
     icon: MdOutlineTimeline,
-    title: 'Career Simulation',
-    description: 'Simulate your career trajectory across different timelines and see projected salary growth, skill gaps, and milestones.',
+    title: 'Science-to-Business Roadmaps',
+    description: 'Each pathway includes learning cost, prototype ideas, target customers, and revenue models for a real pitch.',
     color: '#00ff88',
     badge: 'Predictive',
   },
 ]
 
 const stats = [
-  { value: '500+', label: 'Skills Tracked' },
-  { value: '1,200+', label: 'Career Paths' },
-  { value: '95%', label: 'Match Accuracy' },
-  { value: '50K+', label: 'Users Guided' },
+  { value: '6', label: 'High-Value Paths' },
+  { value: 'LKR', label: 'Local Salary Bands' },
+  { value: '2024', label: 'Market Sources' },
+  { value: '1', label: 'Prototype per Path' },
 ]
 
 const Home = () => {
@@ -42,7 +42,7 @@ const Home = () => {
         <div className="container-max fade-in-up">
           <div className="badge badge-cyan" style={{ margin: '0 auto 2rem', display: 'inline-flex' }}>
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 6px #00d4ff' }} />
-            AI-Powered Career Intelligence Platform
+            Sri Lanka Science-to-Business Career Intelligence
           </div>
 
           <h1
@@ -56,14 +56,14 @@ const Home = () => {
               color: '#e2e8f0',
             }}
           >
-            Navigate Your{' '}
-            <span className="gradient-text-cyan">Career Future</span>
+            Build a{' '}
+            <span className="gradient-text-cyan">Market-Ready Career</span>
             <br />
-            With <span className="gradient-text-purple">AI Precision</span>
+            With <span className="gradient-text-purple">Real Data</span>
           </h1>
 
           <p style={{ fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto 2.5rem', lineHeight: 1.75 }}>
-            Map your skills, discover optimal career paths, and simulate your professional trajectory using advanced machine learning and real-time market data.
+            Turn student skills into practical Sri Lankan ICT, AI, IoT, and analytics careers with transparent scoring, real market evidence, and business-ready prototype plans.
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -75,9 +75,6 @@ const Home = () => {
             </Link>
           </div>
 
-          {/* Decorative glow orbs */}
-          <div style={{ position: 'absolute', top: '10%', left: '5%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(0,212,255,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '20%', right: '5%', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
         </div>
       </section>
 
@@ -163,10 +160,10 @@ const Home = () => {
               className="font-display"
               style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 800, color: '#e2e8f0', marginBottom: '1rem', letterSpacing: '-0.02em' }}
             >
-              Ready to Find Your Path?
+              Ready for the Judges' Questions?
             </h2>
             <p style={{ color: '#64748b', marginBottom: '2rem', maxWidth: '480px', margin: '0 auto 2rem', lineHeight: 1.7 }}>
-              Take the assessment today and get your personalized AI-driven career roadmap in minutes.
+              Run the assessment, show the source-backed recommendation, then pitch a realistic prototype with cost, customer, and revenue model.
             </p>
             <Link to="/assessment" className="btn-primary" style={{ fontSize: '1rem', padding: '0.875rem 2.5rem' }}>
               Begin Your Journey <HiArrowRight />
