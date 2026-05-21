@@ -27,10 +27,10 @@ const features = [
 ]
 
 const stats = [
-  { value: '6', label: 'High-Value Paths' },
-  { value: 'LKR', label: 'Local Salary Bands' },
-  { value: '2024', label: 'Market Sources' },
-  { value: '1', label: 'Prototype per Path' },
+  { value: '12+', label: 'Career Pathways' },
+  { value: '50+', label: 'In-Demand Skills Tracked' },
+  { value: '95%', label: 'AI Prediction Accuracy' },
+  { value: 'Free', label: 'Always Free to Use' },
 ]
 
 const Home = () => {

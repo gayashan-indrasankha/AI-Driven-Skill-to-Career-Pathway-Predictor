@@ -654,7 +654,7 @@ const Assessment = () => {
                       <h3 style={{ color: '#e2e8f0', fontSize: '1rem', fontWeight: 750, marginBottom: '0.45rem' }}>{question.title}</h3>
                       <p style={{ color: '#94a3b8', fontSize: '0.84rem', lineHeight: 1.6, marginBottom: '0.9rem' }}>{question.scenario}</p>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: '0.65rem' }}>
-                        {question.options.map(option => {
+                        {question.options.map((option, optIdx) => {
                           const selected = selectedScore === option.score
                           return (
                             <button key={option.score} onClick={() => setDiagnosticAnswer(question.id, option.score)} style={{
@@ -670,7 +670,7 @@ const Assessment = () => {
                               color: selected ? '#dff9ff' : '#94a3b8',
                             }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '7px', marginBottom: '0.55rem', border: `1px solid ${selected ? '#00d4ff' : 'rgba(0,212,255,0.2)'}`, color: selected ? '#00d4ff' : '#64748b', fontWeight: 800 }}>
-                                {option.score}
+                                {optIdx + 1}
                               </span>
                               <span style={{ display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>{option.label}</span>
                             </button>
