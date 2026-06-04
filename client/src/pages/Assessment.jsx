@@ -4,6 +4,7 @@ import { HiArrowRight, HiArrowLeft, HiCheck } from 'react-icons/hi'
 import { FiAlertCircle } from 'react-icons/fi'
 import GitHubExtractor from '../components/GitHubExtractor'
 import AuthModal from '../components/AuthModal'
+import MarketFitWizard from '../components/market-fit/MarketFitWizard'
 import { useAuth } from '../context/AuthContext'
 
 const steps = [
@@ -26,146 +27,114 @@ const diagnosticQuestions = [
   {
     id: 'data_csv_analysis',
     category: 'Data',
-    title: 'Analyze messy student or sales CSV data',
-    scenario: 'A school or small business gives you attendance, sales, and results in separate CSV files. What can you deliver in one day?',
+    title: 'Clean and summarize CSV data',
+    scenario: 'Combine files, remove errors, and produce a brief summary.',
     measures: [
       { name: 'Python', weight: 1 },
       { name: 'Excel', weight: 0.7 },
       { name: 'Data Analysis', weight: 1 },
-      { name: 'Statistics', weight: 0.7 },
-      { name: 'Communication', weight: 0.4 },
     ],
     options: [
-      { score: 1, label: 'I can describe the columns but need help cleaning and analyzing the data.' },
-      { score: 2, label: 'I can use Excel filters, charts, and basic formulas to find simple patterns.' },
-      { score: 4, label: 'I can clean the data, calculate useful metrics, and create charts with clear findings.' },
-      { score: 5, label: 'I can automate cleaning, validate assumptions, visualize trends, and explain business actions.' },
+      { score: 1, label: 'I cannot do this yet.' },
+      { score: 2, label: 'I can do basic cleaning or use Excel.' },
+      { score: 4, label: 'I can clean, analyze, and make clear charts.' },
+      { score: 5, label: 'I can automate cleaning and create actionable reports.' },
     ],
   },
   {
     id: 'sql_dashboard',
     category: 'Business intelligence',
-    title: 'Turn customer records into a simple dashboard',
-    scenario: 'A training center wants monthly registrations, payment status, and course demand from multiple tables.',
+    title: 'Query databases and create summaries',
+    scenario: 'Write queries to get key counts and basic aggregations.',
     measures: [
       { name: 'SQL', weight: 1 },
-      { name: 'Excel', weight: 0.6 },
       { name: 'Data Analysis', weight: 0.8 },
-      { name: 'Problem Solving', weight: 0.5 },
     ],
     options: [
-      { score: 1, label: 'I can inspect the table names but need help writing useful queries.' },
-      { score: 2, label: 'I can write SELECT, WHERE, and basic summaries for one table.' },
-      { score: 4, label: 'I can join tables, group results, export clean data, and build a basic dashboard.' },
-      { score: 5, label: 'I can design the query flow, check data quality, and deliver decision-ready insights.' },
+      { score: 1, label: 'I cannot write queries.' },
+      { score: 2, label: 'I can write simple SELECT and WHERE queries.' },
+      { score: 4, label: 'I can join tables and build summary reports.' },
+      { score: 5, label: 'I can design query flows and dashboards.' },
     ],
   },
   {
     id: 'ml_model',
-    category: 'AI model',
-    title: 'Build and test a prediction model',
-    scenario: 'A farmer cooperative asks for a prototype that predicts crop disease risk from weather and field observations.',
+    category: 'AI',
+    title: 'Train and evaluate a basic model',
+    scenario: 'Train a simple model and check its accuracy.',
     measures: [
       { name: 'Machine Learning', weight: 1 },
-      { name: 'Statistics', weight: 0.8 },
       { name: 'Python', weight: 0.8 },
-      { name: 'Risk Assessment', weight: 0.5 },
     ],
     options: [
-      { score: 1, label: 'I understand the goal but need help preparing data or training a model.' },
-      { score: 2, label: 'I can train a tutorial model if the dataset and steps are already prepared.' },
-      { score: 4, label: 'I can split data, train a baseline model, evaluate accuracy, and explain limitations.' },
-      { score: 5, label: 'I can compare models, reduce false alarms, document risks, and make a usable demo.' },
+      { score: 1, label: 'I cannot train models yet.' },
+      { score: 2, label: 'I can follow a tutorial to train a model.' },
+      { score: 4, label: 'I can train, evaluate, and explain results.' },
+      { score: 5, label: 'I can compare models and improve performance.' },
     ],
   },
   {
     id: 'deploy_app',
     category: 'Deployment',
-    title: 'Deploy a working web prototype',
-    scenario: 'Your team has a MERN or Python app and needs judges to access it reliably during the exhibition.',
+    title: 'Deploy a simple web app',
+    scenario: 'Publish an app with a public URL and basic monitoring.',
     measures: [
-      { name: 'Linux', weight: 0.8 },
-      { name: 'Docker', weight: 0.8 },
       { name: 'Cloud Deployment', weight: 1 },
-      { name: 'Problem Solving', weight: 0.5 },
+      { name: 'Docker', weight: 0.8 },
     ],
     options: [
-      { score: 1, label: 'I can run the app locally but need help deploying it.' },
-      { score: 2, label: 'I can follow deployment steps on a platform like Render, Vercel, or Railway.' },
-      { score: 4, label: 'I can configure environment variables, database access, logs, and a public URL.' },
-      { score: 5, label: 'I can containerize, monitor failures, document recovery steps, and demo reliably.' },
+      { score: 1, label: 'I cannot deploy apps yet.' },
+      { score: 2, label: 'I can follow deployment steps on a platform.' },
+      { score: 4, label: 'I can configure env, DB, and logs.' },
+      { score: 5, label: 'I can containerize and run reliable demos.' },
     ],
   },
   {
     id: 'security_audit',
     category: 'Security',
-    title: 'Check a small organization for cyber risk',
-    scenario: 'A school lab or SME wants to reduce password, Wi-Fi, phishing, and data-sharing risks.',
+    title: 'Identify common security risks',
+    scenario: 'Check passwords, sharing, and basic network hygiene.',
     measures: [
       { name: 'Security', weight: 1 },
-      { name: 'Risk Assessment', weight: 1 },
-      { name: 'Networking', weight: 0.7 },
-      { name: 'Communication', weight: 0.5 },
+      { name: 'Risk Assessment', weight: 0.8 },
     ],
     options: [
-      { score: 1, label: 'I know common threats but need help checking a real environment.' },
-      { score: 2, label: 'I can identify weak passwords, suspicious emails, and unsafe sharing practices.' },
-      { score: 4, label: 'I can run a structured checklist, score risks, and recommend practical controls.' },
-      { score: 5, label: 'I can prioritize risk by impact, explain tradeoffs, and create a simple action plan.' },
+      { score: 1, label: 'I only know common risks.' },
+      { score: 2, label: 'I can spot weak passwords and phishing.' },
+      { score: 4, label: 'I can run a checklist and recommend fixes.' },
+      { score: 5, label: 'I can prioritize risks and create an action plan.' },
     ],
   },
   {
     id: 'iot_sensor',
-    category: 'IoT prototype',
-    title: 'Prototype a sensor-based monitoring device',
-    scenario: 'A buyer wants a low-cost device to monitor soil moisture, room air quality, or water level.',
+    category: 'IoT',
+    title: 'Build a simple sensor prototype',
+    scenario: 'Read sensor data and show it on a simple dashboard.',
     measures: [
       { name: 'Electronics', weight: 1 },
       { name: 'Arduino', weight: 1 },
-      { name: 'Sensors', weight: 1 },
-      { name: 'Problem Solving', weight: 0.5 },
     ],
     options: [
-      { score: 1, label: 'I can identify needed components but need help wiring and coding.' },
-      { score: 2, label: 'I can follow a wiring diagram and read sensor values with sample code.' },
-      { score: 4, label: 'I can calibrate readings, build alerts, and package a stable demonstration.' },
-      { score: 5, label: 'I can improve reliability, estimate unit cost, and explain scale-up for customers.' },
+      { score: 1, label: 'I cannot build sensor prototypes yet.' },
+      { score: 2, label: 'I can wire sensors and read values.' },
+      { score: 4, label: 'I can calibrate sensors and show readings.' },
+      { score: 5, label: 'I can package a reliable demo and BOM.' },
     ],
   },
   {
     id: 'ux_field_test',
-    category: 'User validation',
-    title: 'Test whether users can actually use the product',
-    scenario: 'Before pitching, you need evidence that students, farmers, or SMEs understand the prototype.',
+    category: 'UX',
+    title: 'Run a quick usability test',
+    scenario: 'Observe users completing tasks and record issues.',
     measures: [
       { name: 'User Research', weight: 1 },
       { name: 'UX Design', weight: 1 },
-      { name: 'Communication', weight: 0.6 },
-      { name: 'Data Analysis', weight: 0.4 },
     ],
     options: [
-      { score: 1, label: 'I can ask for opinions but need help planning a proper test.' },
-      { score: 2, label: 'I can prepare a few questions and collect basic feedback from users.' },
-      { score: 4, label: 'I can run task-based testing, record issues, and improve the interface.' },
-      { score: 5, label: 'I can measure success rate, compare feedback, and prove customer need.' },
-    ],
-  },
-  {
-    id: 'team_pitch',
-    category: 'Commercial delivery',
-    title: 'Coordinate the team and pitch the business value',
-    scenario: 'You have three minutes to convince judges the science can become a practical Sri Lankan business.',
-    measures: [
-      { name: 'Leadership', weight: 0.9 },
-      { name: 'Teamwork', weight: 1 },
-      { name: 'Communication', weight: 1 },
-      { name: 'Problem Solving', weight: 0.6 },
-    ],
-    options: [
-      { score: 1, label: 'I can explain my part but need help connecting science, users, and money.' },
-      { score: 2, label: 'I can help prepare slides and answer simple questions from judges.' },
-      { score: 4, label: 'I can divide work, explain customer value, and respond to practical objections.' },
-      { score: 5, label: 'I can lead the pitch, defend cost and market assumptions, and handle Q&A clearly.' },
+      { score: 1, label: 'I cannot run usability tests yet.' },
+      { score: 2, label: 'I can collect basic feedback.' },
+      { score: 4, label: 'I can run task tests and report findings.' },
+      { score: 5, label: 'I can measure success and iterate designs.' },
     ],
   },
 ]
@@ -207,140 +176,8 @@ const deriveMeasuredSkills = (skillCheck = {}) => {
   )
 }
 
-const marketSelectionGroups = [
-  {
-    key: 'problemAreas',
-    title: 'Real problem area',
-    helper: 'Choose problems where you can explain the customer pain and measurable value.',
-    required: true,
-    options: [
-      {
-        id: 'school_risk_dashboard',
-        title: 'Student performance or dropout risk',
-        customer: 'Schools, tuition classes, parents',
-        proof: 'Early warning dashboard using attendance, marks, and engagement data.',
-        tags: ['Data', 'AI', 'analytics', 'education', 'social impact', 'research'],
-      },
-      {
-        id: 'smart_agriculture',
-        title: 'Crop disease, irrigation, or farm monitoring',
-        customer: 'Farmers, agri officers, cooperatives',
-        proof: 'Sensor or AI prototype that reduces crop loss, water waste, or inspection time.',
-        tags: ['Agriculture', 'IoT', 'AI', 'data', 'sensors', 'machine learning'],
-      },
-      {
-        id: 'sme_business_visibility',
-        title: 'SME sales, stock, or cost visibility',
-        customer: 'Retail shops, service businesses, student startups',
-        proof: 'Dashboard that shows profit leaks, demand trends, or cash-flow risk.',
-        tags: ['Data', 'SQL', 'Excel', 'analytics', 'business', 'Entrepreneurship'],
-      },
-      {
-        id: 'cyber_safety',
-        title: 'Cyber safety for schools or SMEs',
-        customer: 'Schools, clubs, small businesses',
-        proof: 'Risk checklist, phishing scanner, or action plan that lowers common threats.',
-        tags: ['Cybersecurity', 'security', 'risk', 'networking', 'business'],
-      },
-      {
-        id: 'public_service_ux',
-        title: 'Better access to public or campus services',
-        customer: 'Students, clinics, campus offices, public counters',
-        proof: 'Tested workflow that reduces waiting, confusion, or missed applications.',
-        tags: ['Design', 'UX', 'research', 'social impact', 'communication'],
-      },
-      {
-        id: 'low_cost_cloud',
-        title: 'Low-cost reliable app hosting',
-        customer: 'Student founders, SMEs, campus teams',
-        proof: 'Deployment plan that keeps apps online and controls monthly cloud cost.',
-        tags: ['Cloud', 'DevOps', 'Docker', 'platform engineering', 'business'],
-      },
-    ],
-  },
-  {
-    key: 'validationAssets',
-    title: 'Proof you can collect before judging',
-    helper: 'Judges will trust evidence more than opinions. Pick what your team can actually access.',
-    required: true,
-    options: [
-      {
-        id: 'interview_users',
-        title: 'Interview 5+ real users',
-        customer: 'Students, farmers, shop owners, staff, or coordinators',
-        proof: 'Short findings table with pain points, current workaround, and willingness to try.',
-        tags: ['research', 'UX', 'social impact', 'communication'],
-      },
-      {
-        id: 'pilot_location',
-        title: 'Use a pilot location',
-        customer: 'School, farm, shop, lab, club, department, or clinic',
-        proof: 'One-page pilot plan with owner approval and test schedule.',
-        tags: ['business', 'Entrepreneurship', 'research'],
-      },
-      {
-        id: 'real_dataset',
-        title: 'Use real data or field readings',
-        customer: 'Records, CSV exports, surveys, sensor readings, or logs',
-        proof: 'Clean sample dataset with source, date, and privacy notes.',
-        tags: ['Data', 'analytics', 'AI', 'IoT', 'statistics'],
-      },
-      {
-        id: 'budget_owner',
-        title: 'Identify who could pay',
-        customer: 'Owner, principal, coordinator, farmer group, or department head',
-        proof: 'Simple buyer profile with budget reason and expected value in LKR.',
-        tags: ['Entrepreneurship', 'business', 'social impact'],
-      },
-    ],
-  },
-  {
-    key: 'prototypeRoute',
-    title: 'Prototype route',
-    helper: 'Pick the demonstration format that best proves value on an exhibition table.',
-    required: false,
-    options: [
-      {
-        id: 'dashboard_web_app',
-        title: 'Dashboard or web app',
-        customer: 'Best for data, AI, cloud, UX, and business analytics',
-        proof: 'Live screens with before/after metrics and exportable report.',
-        tags: ['Data', 'AI', 'Cloud', 'Design', 'analytics'],
-      },
-      {
-        id: 'sensor_device',
-        title: 'Sensor or IoT device',
-        customer: 'Best for agriculture, environment, safety, and monitoring',
-        proof: 'Working device, readings, bill of materials, and field test plan.',
-        tags: ['IoT', 'Agriculture', 'sensors', 'electronics'],
-      },
-      {
-        id: 'audit_action_plan',
-        title: 'Audit plus action plan',
-        customer: 'Best for cybersecurity, risk, operations, and cost saving',
-        proof: 'Risk score, prioritized fixes, and practical implementation checklist.',
-        tags: ['Cybersecurity', 'security', 'risk', 'business'],
-      },
-      {
-        id: 'tested_mobile_flow',
-        title: 'Tested mobile-first workflow',
-        customer: 'Best for students, public services, field teams, and SMEs',
-        proof: 'Clickable prototype with user task success and feedback evidence.',
-        tags: ['Design', 'UX', 'research', 'social impact'],
-      },
-    ],
-  },
-]
-
-const getSelectedMarketOptions = (marketSelections = {}) => marketSelectionGroups.flatMap(group =>
-  (marketSelections[group.key] || [])
-    .map(optionId => group.options.find(option => option.id === optionId))
-    .filter(Boolean)
-    .map(option => ({ ...option, groupTitle: group.title, groupKey: group.key }))
-)
-
 const buildPracticalInterestTags = ({ interests = [], marketSelections = {} }) => {
-  const marketTags = getSelectedMarketOptions(marketSelections).flatMap(option => option.tags)
+  const marketTags = marketSelections.tags || []
   return [...new Set([...interests, ...marketTags])]
 }
 
@@ -390,15 +227,16 @@ const buildDiagnosticResults = ({ skillCheck = {}, skillEvidence = '', experienc
     })
   }
 
-  getSelectedMarketOptions(marketSelections).forEach(option => {
+  const marketLabel = [marketSelections.domainLabel, marketSelections.proofLabel].filter(Boolean).join(' | ')
+  if (marketLabel) {
     answers.push({
-      questionId: `market_${option.groupKey}_${option.id}`,
-      questionText: option.groupTitle,
-      selectedOption: `${option.title} | Customer: ${option.customer} | Proof: ${option.proof}`,
+      questionId: 'market_fit_wizard',
+      questionText: 'Market fit choices',
+      selectedOption: marketLabel,
       score: 0,
       category: 'market-fit',
     })
-  })
+  }
 
   return {
     answers,
@@ -416,10 +254,12 @@ const buildDiagnosticResults = ({ skillCheck = {}, skillEvidence = '', experienc
 }
 
 const Assessment = () => {
+  const [expandedQuestions, setExpandedQuestions] = useState({})
+  const [expandedOptionTexts, setExpandedOptionTexts] = useState({})
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     name: '', email: '', experience: '', education: '',
-    skillCheck: {}, skillEvidence: '', interests: [], marketSelections: {}, careerGoals: '', workPreference: '',
+    skillCheck: {}, skillEvidence: '', interests: [], marketSelections: { domainId: '', domainLabel: '', proofId: '', proofLabel: '', tags: [] }, careerGoals: '', workPreference: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -450,13 +290,22 @@ const Assessment = () => {
   const diagnosticTotal = Object.values(formData.skillCheck).reduce((sum, score) => sum + Number(score || 0), 0)
   const diagnosticPercent = answeredDiagnostics ? Math.round((diagnosticTotal / (answeredDiagnostics * 5)) * 100) : 0
   const practicalTags = buildPracticalInterestTags(formData)
-  const selectedProblemCount = formData.marketSelections.problemAreas?.length || 0
-  const selectedValidationCount = formData.marketSelections.validationAssets?.length || 0
-  const selectedPrototypeCount = formData.marketSelections.prototypeRoute?.length || 0
   const canContinue = (
     (currentStep !== 2 || answeredDiagnostics >= 4) &&
-    (currentStep !== 4 || (selectedProblemCount >= 1 && selectedValidationCount >= 1))
+    (currentStep !== 4 || (formData.marketSelections.domainId && formData.marketSelections.proofId))
   )
+
+  const toggleQuestionExpand = (id) => setExpandedQuestions(prev => ({ ...prev, [id]: !prev[id] }))
+  const toggleOptionText = (questionId, optionIndex) => setExpandedOptionTexts(prev => ({ ...prev, [`${questionId}_${optionIndex}`]: !prev[`${questionId}_${optionIndex}`] }))
+  const truncate = (text, length = 140) => (text && text.length > length ? `${text.slice(0, length).trim()}…` : text)
+
+  const handleMarketFitChange = (nextSelection) => {
+    setFormData(prev => ({ ...prev, marketSelections: nextSelection }))
+  }
+
+  const handleMarketFitConfirm = (nextSelection) => {
+    setFormData(prev => ({ ...prev, marketSelections: nextSelection }))
+  }
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -605,6 +454,14 @@ const Assessment = () => {
 
           {currentStep === 2 && (
             <div>
+              <div style={{ marginBottom: '1rem', padding: '0.9rem', borderRadius: '8px', background: 'rgba(2,6,23,0.45)', border: '1px solid rgba(148,163,184,0.06)' }}>
+                <div style={{ fontWeight: 700, color: '#e2e8f0', marginBottom: '0.45rem' }}>Quick guidance</div>
+                <ul style={{ margin: 0, paddingLeft: '1.05rem', color: '#94a3b8', lineHeight: 1.6 }}>
+                  <li>Pick the option that best matches what you can deliver in practice.</li>
+                  <li>Answer at least 4 checks so recommendations are reliable.</li>
+                  <li>Add one short proof of work (link or description).</li>
+                </ul>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                 <div style={{ flex: '1 1 280px' }}>
                   <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.5rem' }}>Practical Skill Check</h2>
@@ -651,11 +508,17 @@ const Assessment = () => {
                           Measures: {question.measures.map(item => item.name).join(', ')}
                         </span>
                       </div>
-                      <h3 style={{ color: '#e2e8f0', fontSize: '1rem', fontWeight: 750, marginBottom: '0.45rem' }}>{question.title}</h3>
-                      <p style={{ color: '#94a3b8', fontSize: '0.84rem', lineHeight: 1.6, marginBottom: '0.9rem' }}>{question.scenario}</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.45rem' }}>
+                        <h3 style={{ color: '#e2e8f0', fontSize: '1rem', fontWeight: 750, margin: 0 }}>{question.title}</h3>
+                        <button onClick={() => toggleQuestionExpand(question.id)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.82rem', padding: 0 }}>
+                          {expandedQuestions[question.id] ? 'Show less' : 'Read more'}
+                        </button>
+                      </div>
+                      <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '0.9rem' }}>{expandedQuestions[question.id] ? question.scenario : truncate(question.scenario, 140)}</p>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: '0.65rem' }}>
                         {question.options.map((option, optIdx) => {
                           const selected = selectedScore === option.score
+                          const keyId = `${question.id}_${optIdx}`
                           return (
                             <button key={option.score} onClick={() => setDiagnosticAnswer(question.id, option.score)} style={{
                               minHeight: '82px',
@@ -672,7 +535,14 @@ const Assessment = () => {
                               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '7px', marginBottom: '0.55rem', border: `1px solid ${selected ? '#00d4ff' : 'rgba(0,212,255,0.2)'}`, color: selected ? '#00d4ff' : '#64748b', fontWeight: 800 }}>
                                 {optIdx + 1}
                               </span>
-                              <span style={{ display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>{option.label}</span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.6rem' }}>
+                                <span style={{ display: 'block', fontSize: '0.8rem', lineHeight: 1.45, color: selected ? '#020408' : undefined }}>{expandedOptionTexts[keyId] ? option.label : truncate(option.label, 140)}</span>
+                                {option.label && option.label.length > 140 && (
+                                  <button onClick={(e) => { e.stopPropagation(); toggleOptionText(question.id, optIdx) }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}>
+                                    {expandedOptionTexts[keyId] ? 'Less' : 'More'}
+                                  </button>
+                                )}
+                              </div>
                             </button>
                           )
                         })}
@@ -722,7 +592,7 @@ const Assessment = () => {
                 <textarea
                   className="input-futuristic"
                   rows={4}
-                  placeholder="Example: GitHub repo, school project, Arduino prototype, Power BI dashboard, field survey, science exhibition demo, customer interview notes..."
+                  placeholder="Short link or one-line proof (e.g., GitHub repo, dashboard link, or 1-sentence project proof)"
                   value={formData.skillEvidence}
                   onChange={e => setFormData(p => ({ ...p, skillEvidence: e.target.value }))}
                   style={{ resize: 'vertical' }}
@@ -751,87 +621,14 @@ const Assessment = () => {
 
           {currentStep === 4 && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                <div style={{ flex: '1 1 320px' }}>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.5rem' }}>Problem-Market Fit</h2>
-                  <p style={{ color: '#64748b', fontSize: '0.875rem', lineHeight: 1.7 }}>
-                    Pick a problem you can validate with real users, data, or a pilot location before the exhibition. These choices guide the career match and make the pitch more commercial.
-                  </p>
-                </div>
-                <div style={{ minWidth: '190px', padding: '0.9rem 1rem', border: '1px solid rgba(0,212,255,0.18)', borderRadius: '8px', background: 'rgba(0,212,255,0.06)' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>Commercial readiness</div>
-                  <div style={{ color: selectedProblemCount && selectedValidationCount ? '#00ff88' : '#fbbf24', fontSize: '1rem', fontWeight: 800 }}>
-                    {selectedProblemCount && selectedValidationCount ? 'Evidence ready' : 'Needs proof'}
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '0.35rem' }}>
-                    {selectedProblemCount} problem, {selectedValidationCount} proof, {selectedPrototypeCount} prototype
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(185px,1fr))', gap: '0.75rem', marginBottom: '1.4rem' }}>
-                {[
-                  { label: 'Problem required', value: selectedProblemCount >= 1 ? 'Selected' : 'Pick one' },
-                  { label: 'Customer proof required', value: selectedValidationCount >= 1 ? 'Selected' : 'Pick one' },
-                  { label: 'AI matching signals', value: practicalTags.length || '0' },
-                ].map(item => (
-                  <div key={item.label} style={{ padding: '0.85rem', border: '1px solid rgba(148,163,184,0.12)', borderRadius: '8px', background: 'rgba(6,13,24,0.45)' }}>
-                    <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.35rem' }}>{item.label}</div>
-                    <div style={{ color: '#e2e8f0', fontWeight: 700 }}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
-                {marketSelectionGroups.map(group => (
-                  <div key={group.key} style={{ padding: '1rem', border: '1px solid rgba(0,212,255,0.12)', borderRadius: '8px', background: 'rgba(6,13,24,0.45)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.8rem', alignItems: 'baseline', flexWrap: 'wrap', marginBottom: '0.45rem' }}>
-                      <h3 style={{ color: '#e2e8f0', fontSize: '1rem', fontWeight: 750 }}>{group.title}</h3>
-                      <span style={{ color: group.required ? '#00d4ff' : '#64748b', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>
-                        {group.required ? 'Required' : 'Optional'}
-                      </span>
-                    </div>
-                    <p style={{ color: '#64748b', fontSize: '0.82rem', lineHeight: 1.6, marginBottom: '0.9rem' }}>{group.helper}</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(245px,1fr))', gap: '0.75rem' }}>
-                      {group.options.map(option => {
-                        const selected = (formData.marketSelections[group.key] || []).includes(option.id)
-                        return (
-                          <button key={option.id} onClick={() => toggleMarketSelection(group.key, option.id)} style={{
-                            minHeight: '154px',
-                            padding: '0.9rem',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            textAlign: 'left',
-                            border: '1px solid',
-                            borderColor: selected ? '#00d4ff' : 'rgba(148,163,184,0.14)',
-                            background: selected ? 'rgba(0,212,255,0.12)' : 'rgba(2,4,8,0.32)',
-                            color: selected ? '#dff9ff' : '#94a3b8',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.6rem',
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
-                              <span style={{ color: selected ? '#e2e8f0' : '#cbd5e1', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.35 }}>{option.title}</span>
-                              <span style={{ width: '22px', height: '22px', borderRadius: '6px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${selected ? '#00d4ff' : 'rgba(0,212,255,0.25)'}`, background: selected ? '#00d4ff' : 'transparent' }}>
-                                {selected && <HiCheck size={13} color="#020408" />}
-                              </span>
-                            </div>
-                            <div>
-                              <div style={{ color: '#00d4ff', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '0.25rem' }}>Customer</div>
-                              <div style={{ fontSize: '0.78rem', lineHeight: 1.45 }}>{option.customer}</div>
-                            </div>
-                            <div>
-                              <div style={{ color: '#a855f7', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '0.25rem' }}>Proof for judges</div>
-                              <div style={{ fontSize: '0.78rem', lineHeight: 1.45 }}>{option.proof}</div>
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <MarketFitWizard
+                value={formData.marketSelections}
+                onChange={handleMarketFitChange}
+                onConfirm={(selection) => {
+                  handleMarketFitConfirm(selection)
+                  setCurrentStep(s => Math.min(steps.length, s + 1))
+                }}
+              />
 
               <div style={{ marginTop: '1.4rem', padding: '1rem', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '8px', background: 'rgba(124,58,237,0.06)' }}>
                 <div style={{ fontSize: '0.72rem', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '0.65rem' }}>Signals sent to career matching</div>
@@ -848,11 +645,9 @@ const Assessment = () => {
                 )}
               </div>
 
-              {(!selectedProblemCount || !selectedValidationCount) && (
-                <div style={{ marginTop: '1rem', color: '#fbbf24', fontSize: '0.82rem', lineHeight: 1.6 }}>
-                  Select at least one real problem area and one proof source before continuing.
-                </div>
-              )}
+              <div style={{ marginTop: '1rem', color: '#94a3b8', fontSize: '0.82rem', lineHeight: 1.6 }}>
+                Use the wizard above to pick a domain, choose a proof method, and confirm your signals.
+              </div>
             </div>
           )}
 
