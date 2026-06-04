@@ -7,6 +7,20 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+// ─── Critical environment variable check ──────────────────────────
+// This runs BEFORE any route is registered so problems surface immediately
+// at startup rather than mid-request with a confusing JWT error.
+if (!process.env.JWT_SECRET) {
+  console.error('\n❌ FATAL: JWT_SECRET is not set in your .env file.');
+  console.error('   Register and login will not work without it.');
+  console.error('   Fix: Add   JWT_SECRET=anyLongRandomString   to your .env file.\n');
+  process.exit(1);
+}
+if (!process.env.GEMINI_API_KEY) {
+  console.warn('⚠️  GEMINI_API_KEY is not set. PathGuider AI chat will use local-fallback mode only.');
+}
+
+
 const app = express();
 
 // ─── CORS Configuration ───────────────────────────────────────────
