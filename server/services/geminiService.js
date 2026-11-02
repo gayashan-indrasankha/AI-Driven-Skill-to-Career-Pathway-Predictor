@@ -1,7 +1,8 @@
 const https = require('https');
 
-// gemini-1.5-* models were retired by Google; override with GEMINI_MODEL in .env if needed
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+// Google retires pinned model versions (1.5, then 2.5); the "-latest" alias tracks the current
+// fast model. Override with GEMINI_MODEL in .env if needed.
+const DEFAULT_GEMINI_MODEL = 'gemini-flash-lite-latest';
 
 const fallbackScenarios = {
   ai: {

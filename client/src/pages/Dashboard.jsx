@@ -46,50 +46,48 @@ const Dashboard = () => {
     if (!token) { setLoading(false); return }
 
     try {
-      // Fetch careers from seeded DB + user assessment in parallel
-      const [careersRes, assessmentRes] = await Promise.all([
-        fetch('/api/careers?limit=3', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/assessment/my/latest', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
-      ])
-
-      const careersJson = await careersRes.json()
+      const assessmentRes = await fetch('/api/assessment/my/latest', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
       const assessmentJson = assessmentRes ? await assessmentRes.json().catch(() => null) : null
 
-      // Build career matches from DB data
+      // Career matches come from the assessment's own predictions, so each title keeps its own score
+      // (predictedCareers is already sorted by matchScore on the server)
       const COLORS = ['#00d4ff', '#7c3aed', '#00ff88']
-      const careers = (careersJson.success ? careersJson.data?.careers || careersJson.data || [] : [])
+      const predictions = (assessmentJson?.data?.predictedCareers || []).filter(p => p.careerPath)
+      const careers = predictions
         .slice(0, 3)
-        .map((c, i) => ({
-          title: c.title,
-          match: assessmentJson?.data?.predictedCareers?.[i]?.matchScore || Math.round(90 - i * 8),
-          industry: c.industry,
-          salary: `${fmtShortLkr(c.salaryPotential?.midLevel?.min)}-${fmtShortLkr(c.salaryPotential?.midLevel?.max)}`,
-          growth: `+${c.growthRate}%`,
+        .map((p, i) => ({
+          title: p.careerPath.title,
+          match: p.matchScore,
+          industry: p.careerPath.industry,
+          salary: `${fmtShortLkr(p.careerPath.salaryPotential?.midLevel?.min)}-${fmtShortLkr(p.careerPath.salaryPotential?.midLevel?.max)}`,
+          growth: `+${p.careerPath.growthRate}%`,
           color: COLORS[i],
         }))
 
-      // Build skill profile from assessment or seeded skills
+      // Build skill profile from assessment or GitHub languages
       const assessment = assessmentJson?.data
-      const skillRatings = assessment?.skillRatings?.length
-        ? assessment.skillRatings.slice(0, 6)
-        : assessment?.githubData?.topLanguages?.slice(0, 6).map(l => ({ name: l.language, proficiency: Math.round(l.percentage / 20), category: 'Technical' }))
+      const allSkills = assessment?.skillRatings?.length
+        ? assessment.skillRatings
+        : assessment?.githubData?.topLanguages?.map(l => ({ name: l.language, proficiency: Math.max(1, Math.round(l.percentage / 20)), category: 'Technical' }))
         || []
+      const skillRatings = allSkills.slice(0, 6)
 
       const topMatch = careers[0]?.match || 0
-      const skillsCount = skillRatings.length || assessment?.githubData?.topLanguages?.length || 0
+      const skillsCount = allSkills.length
+      const topGaps = predictions[0]?.gapSkills || []
 
       setData({
         stats: {
           matchScore: careers.length ? `${topMatch}%` : '--',
           skillsCount: skillsCount || '--',
           growthRate: careers[0]?.growth || '--',
-          pathsFound: careers.length || '--',
+          pathsFound: predictions.length || '--',
         },
         careers,
         skills: skillRatings.map(s => ({ name: s.name, level: s.proficiency || 3, category: s.category || 'Technical' })),
         nextSteps: [
           { step: careers[0] ? `Pursue ${careers[0].title} - your top match` : 'Complete Assessment for personalized matches', icon: MdOutlineSchool, color: '#00d4ff' },
-          { step: assessment?.gapSkills?.length ? `Bridge skill gaps: ${assessment.gapSkills.slice(0,2).join(', ')}` : 'Connect GitHub to detect your skills automatically', icon: HiLightningBolt, color: '#7c3aed' },
+          { step: topGaps.length ? `Bridge skill gaps: ${topGaps.slice(0, 2).join(', ')}` : 'Connect GitHub to detect your skills automatically', icon: HiLightningBolt, color: '#7c3aed' },
           { step: 'Run Career Simulation for your top matched path', icon: HiTrendingUp, color: '#00ff88' },
         ],
       })

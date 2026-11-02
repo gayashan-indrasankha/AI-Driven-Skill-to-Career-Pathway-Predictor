@@ -34,7 +34,7 @@ Create `.env` with:
 MONGO_URI=mongodb://localhost:27017/career_pathway_db
 JWT_SECRET=replace_with_a_secret
 GEMINI_API_KEY=optional_for_simulation_chat
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-flash-lite-latest
 CLIENT_URL=http://localhost:5173
 ```
 
