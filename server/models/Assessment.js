@@ -111,6 +111,14 @@ const assessmentSchema = new mongoose.Schema(
       },
     ],
 
+    // ── Scenario simulator (kept apart from githubData.contributionScore) ──
+    simulationResults: {
+      career: { type: String },
+      averageScore: { type: Number, min: 0, max: 100 },
+      rounds: { type: Number, default: 0 },
+      updatedAt: { type: Date },
+    },
+
     // ── Status ────────────────────────────────────────────────────
     status: {
       type: String,

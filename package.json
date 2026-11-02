@@ -10,7 +10,8 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "npm run build --prefix client",
     "install-all": "npm install && npm install --prefix client",
-    "seed": "node server/scripts/seedCareers.js"
+    "seed": "node server/scripts/seedCareers.js",
+    "test": "node --test --test-concurrency=1 server/tests/*.test.js"
   },
   "keywords": [
     "AI",

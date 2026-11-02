@@ -2,27 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { param, query, validationResult } = require('express-validator');
 const { protect } = require('../middleware/auth');
-const { analyzeGitHubProfile } = require('../services/githubService');
+const {
+  getGitHubAnalysis,
+  isValidGitHubUsername,
+  toAssessmentGithubData,
+  GITHUB_USERNAME_PATTERN,
+} = require('../services/githubService');
 const Assessment = require('../models/Assessment');
 const User = require('../models/User');
-
-// ── In-memory cache: username → { data, cachedAt } ───────────────
-const cache = new Map();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-const getCached = (username) => {
-  const entry = cache.get(username.toLowerCase());
-  if (!entry) return null;
-  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
-    cache.delete(username.toLowerCase());
-    return null;
-  }
-  return entry.data;
-};
-
-const setCache = (username, data) => {
-  cache.set(username.toLowerCase(), { data, cachedAt: Date.now() });
-};
 
 // ─────────────────────────────────────────────────────────────────
 // @GET /api/github/analyze/:username
@@ -35,7 +22,7 @@ router.get(
       .trim()
       .notEmpty().withMessage('GitHub username is required')
       .isLength({ max: 39 }).withMessage('Invalid GitHub username length')
-      .matches(/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/).withMessage('Invalid GitHub username format'),
+      .matches(GITHUB_USERNAME_PATTERN).withMessage('Invalid GitHub username format'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -43,16 +30,9 @@ router.get(
 
     const { username } = req.params;
 
-    // Return cached result if fresh
-    const cached = getCached(username);
-    if (cached) {
-      return res.json({ success: true, cached: true, data: cached });
-    }
-
     try {
-      const analysis = await analyzeGitHubProfile(username);
-      setCache(username, analysis);
-      res.json({ success: true, cached: false, data: analysis });
+      const { analysis, cached } = await getGitHubAnalysis(username);
+      res.json({ success: true, cached, data: analysis });
     } catch (err) {
       const status = err.message.includes('not found') ? 404
         : err.message.includes('rate limit') ? 429
@@ -72,32 +52,13 @@ router.post('/extract-and-save', protect, async (req, res) => {
     return res.status(400).json({ success: false, error: 'GitHub username is required' });
   }
   // Same rules as the public analyze route; the username is interpolated into GitHub API URLs
-  if (username.length > 39 || !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(username)) {
+  if (!isValidGitHubUsername(username)) {
     return res.status(400).json({ success: false, error: 'Invalid GitHub username format' });
   }
 
   try {
-    // Use cache if available
-    let analysis = getCached(username);
-    if (!analysis) {
-      analysis = await analyzeGitHubProfile(username);
-      setCache(username, analysis);
-    }
-
-    // ── Build githubData object matching Assessment schema ────────
-    const githubData = {
-      username: analysis.profile.username,
-      profileUrl: analysis.profile.profileUrl,
-      publicRepos: analysis.profile.publicRepos,
-      followers: analysis.profile.followers,
-      topLanguages: analysis.topLanguages.map(l => ({
-        language: l.language,
-        percentage: l.percentage,
-      })),
-      pinnedRepos: analysis.pinnedRepos,
-      contributionScore: analysis.technicalAptitudeScore,
-      fetchedAt: new Date(),
-    };
+    const { analysis } = await getGitHubAnalysis(username);
+    const githubData = toAssessmentGithubData(analysis);
 
     // ── Find or create latest draft assessment ────────────────────
     let assessment = await Assessment.findOne({

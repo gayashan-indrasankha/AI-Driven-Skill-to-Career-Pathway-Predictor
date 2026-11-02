@@ -23,6 +23,11 @@ if (!process.env.GEMINI_API_KEY) {
 
 const app = express();
 
+// Behind nginx or another reverse proxy, set TRUST_PROXY=1 so req.ip is the real client
+// (rate limits are per IP). Leave it unset when Node is exposed directly, or clients could
+// spoof X-Forwarded-For to dodge the limits.
+if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY);
+
 // ─── CORS Configuration ───────────────────────────────────────────
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:5173',
@@ -48,7 +53,9 @@ app.use(
 
 // ─── Security & Parsing Middleware ────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));      // disable CSP for API-only server
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+}
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -168,17 +175,20 @@ const startServer = async () => {
 };
 
 
-// ─── Graceful Shutdown ────────────────────────────────────────────
-process.on('SIGTERM', async () => {
-  console.log('🛑 SIGTERM received. Closing server...');
-  await mongoose.connection.close();
-  process.exit(0);
-});
+// Only listen and connect when run directly (`node server/index.js`); tests import `app`
+if (require.main === module) {
+  // ─── Graceful Shutdown ──────────────────────────────────────────
+  process.on('SIGTERM', async () => {
+    console.log('🛑 SIGTERM received. Closing server...');
+    await mongoose.connection.close();
+    process.exit(0);
+  });
 
-process.on('unhandledRejection', (reason) => {
-  console.error('⚠️  Unhandled Rejection:', reason);
-});
+  process.on('unhandledRejection', (reason) => {
+    console.error('⚠️  Unhandled Rejection:', reason);
+  });
 
-startServer();
+  startServer();
+}
 
 module.exports = app;

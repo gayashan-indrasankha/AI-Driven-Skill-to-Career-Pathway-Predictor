@@ -12,7 +12,6 @@ const buildSignals = (preset, proofId) => {
 const MarketFitWizard = ({ value = {}, onChange, onConfirm }) => {
   const [step, setStep] = useState(1)
   const selectedPreset = getMarketFitPreset(value.domainId)
-  const selectedProof = selectedPreset?.proofOptions.find(item => item.id === value.proofId)
 
   const signals = useMemo(() => buildSignals(selectedPreset, value.proofId), [selectedPreset, value.proofId])
 

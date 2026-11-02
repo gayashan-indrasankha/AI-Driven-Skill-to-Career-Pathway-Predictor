@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FiX, FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
   const [tab, setTab] = useState(defaultTab)

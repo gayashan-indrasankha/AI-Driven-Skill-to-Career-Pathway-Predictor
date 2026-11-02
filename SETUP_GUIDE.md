@@ -213,6 +213,8 @@ NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 GITHUB_TOKEN=
 GEMINI_API_KEY=
+# Set to 1 only when the API runs behind nginx or another reverse proxy (per-IP rate limits)
+TRUST_PROXY=
 ```
 
 ### How to get each key:

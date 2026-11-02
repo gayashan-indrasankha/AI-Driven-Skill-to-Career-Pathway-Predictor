@@ -4,7 +4,7 @@ import {
   FiExternalLink, FiCheck, FiAlertCircle,
   FiZap, FiTrendingUp, FiBookmark,
 } from 'react-icons/fi'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const LANGUAGE_COLORS = {
   JavaScript: '#f7df1e', TypeScript: '#3178c6', Python: '#3572a5',
@@ -130,6 +130,14 @@ const GitHubExtractor = ({ onSaved }) => {
 
   // ── Save to Assessment ────────────────────────────────────────
   const handleSave = async () => {
+    // No account yet (new user in the wizard): hand the username to the parent, which
+    // sends it with the final assessment submit once the account has been created.
+    if (!token) {
+      setPhase('saved')
+      if (onSaved) onSaved({ username: resolvedUsername, primaryInterests: data?.primaryInterests || [], deferred: true })
+      return
+    }
+
     setPhase('saving')
     try {
       const res = await fetch('/api/github/extract-and-save', {
@@ -143,7 +151,7 @@ const GitHubExtractor = ({ onSaved }) => {
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Save failed')
       setPhase('saved')
-      if (onSaved) onSaved(json.data)
+      if (onSaved) onSaved({ ...json.data, username: resolvedUsername })
     } catch (err) {
       setError(err.message)
       setPhase('error')
@@ -370,7 +378,9 @@ const GitHubExtractor = ({ onSaved }) => {
             {phase === 'saved' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.25)', borderRadius: '8px' }}>
                 <FiCheck size={15} color="#00ff88" />
-                <span style={{ fontSize: '0.825rem', color: '#00ff88', fontWeight: 600 }}>Saved to Assessment ✓</span>
+                <span style={{ fontSize: '0.825rem', color: '#00ff88', fontWeight: 600 }}>
+                  {token ? 'Saved to Assessment ✓' : 'Added — saved when you finish ✓'}
+                </span>
               </div>
             ) : (
               <button

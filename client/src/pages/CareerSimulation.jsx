@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { HiChartBar, HiClock, HiPlay, HiTrendingUp } from 'react-icons/hi'
 import { MdCurrencyRupee, MdOutlineScience, MdOutlineTimeline } from 'react-icons/md'
-import { FiAlertCircle, FiBookOpen, FiBriefcase, FiCheckCircle, FiExternalLink, FiRefreshCw, FiTarget } from 'react-icons/fi'
+import { FiAlertCircle, FiBookOpen, FiBriefcase, FiCheckCircle, FiExternalLink, FiTarget } from 'react-icons/fi'
 
 const DEFAULT_SKILLS = [
   { name: 'Python', proficiency: 3 },

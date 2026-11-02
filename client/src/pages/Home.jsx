@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { HiArrowRight, HiLightningBolt, HiChartBar, HiAcademicCap } from 'react-icons/hi'
+import { HiArrowRight } from 'react-icons/hi'
 import { MdOutlineAutoGraph, MdOutlinePsychology, MdOutlineTimeline } from 'react-icons/md'
 
 const features = [

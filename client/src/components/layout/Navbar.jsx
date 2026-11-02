@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { HiMenuAlt3, HiX } from 'react-icons/hi'
 import { FiUser, FiLogOut, FiZap } from 'react-icons/fi'
 import { MdOutlineElectricBolt } from 'react-icons/md'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../context/useAuth'
 import AuthModal from '../AuthModal'
 
 const navLinks = [
@@ -29,10 +29,13 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  useEffect(() => {
+  // Close menus when the route changes (state adjusted during render, not in an effect)
+  const [lastLocationKey, setLastLocationKey] = useState(location.key)
+  if (location.key !== lastLocationKey) {
+    setLastLocationKey(location.key)
     setMobileOpen(false)
     setShowUserMenu(false)
-  }, [location])
+  }
 
   const openLogin = () => { setAuthTab('login'); setShowAuth(true) }
   const openRegister = () => { setAuthTab('register'); setShowAuth(true) }

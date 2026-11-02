@@ -1,23 +1,12 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const router = express.Router();
+const { optionalAuth } = require('../middleware/auth');
 const CareerPath = require('../models/CareerPath');
 const Assessment = require('../models/Assessment');
 
 const normalise = (value = '') => value.toString().trim().toLowerCase();
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
-
-const optionalAuth = (req, _res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return next();
-
-  try {
-    req.user = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
-  } catch {
-    req.user = null;
-  }
-  next();
-};
 
 const buildSkillMap = (skills = []) => {
   const map = new Map();
@@ -192,6 +181,12 @@ router.post('/run', optionalAuth, async (req, res) => {
     const { careerId, currentSkills = [], timelineMonths = 12 } = req.body;
     if (!careerId) {
       return res.status(400).json({ success: false, error: 'careerId is required' });
+    }
+    if (!mongoose.isValidObjectId(careerId)) {
+      return res.status(400).json({ success: false, error: 'Invalid careerId' });
+    }
+    if (!Array.isArray(currentSkills)) {
+      return res.status(400).json({ success: false, error: 'currentSkills must be an array' });
     }
 
     const career = await CareerPath.findById(careerId).lean();

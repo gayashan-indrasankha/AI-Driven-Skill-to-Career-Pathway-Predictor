@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { FiSend, FiTrash2, FiZap, FiUser, FiRefreshCw } from 'react-icons/fi'
-import { useAuth } from '../context/AuthContext'
+import { FiSend, FiTrash2, FiUser, FiRefreshCw } from 'react-icons/fi'
+import { useAuth } from '../context/useAuth'
 
 const AI_NAME = 'PathGuide AI'
 
@@ -86,9 +86,15 @@ const Message = ({ msg, isLatest }) => {
   )
 }
 
+const welcomeMessage = () => ({
+  role: 'assistant',
+  content: `Hey there! I'm **${AI_NAME}** - your practical career and project pitch advisor.\n\nI can help you:\n- Explore Sri Lankan tech careers with **LKR salary signals**\n- Build personalized **learning roadmaps**\n- Understand your **assessment results**\n- Turn a prototype into a **Science-to-Business pitch**\n\nWhat career or project question is on your mind today?`,
+  time: Date.now(),
+})
+
 // ── Main Component ────────────────────────────────────────────────
 const NexusChat = () => {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(() => [welcomeMessage()])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -98,14 +104,6 @@ const NexusChat = () => {
 
   const { token, isAuth } = useAuth()
 
-  useEffect(() => {
-    // Welcome message
-    setMessages([{
-      role: 'assistant',
-      content: `Hey there! I'm **${AI_NAME}** - your practical career and project pitch advisor.\n\nI can help you:\n- Explore Sri Lankan tech careers with **LKR salary signals**\n- Build personalized **learning roadmaps**\n- Understand your **assessment results**\n- Turn a prototype into a **Science-to-Business pitch**\n\nWhat career or project question is on your mind today?`,
-      time: Date.now(),
-    }])
-  }, [])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 

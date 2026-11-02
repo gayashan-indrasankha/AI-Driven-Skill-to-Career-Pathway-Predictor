@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { HiTrendingUp, HiLightningBolt, HiAcademicCap, HiChartBar } from 'react-icons/hi'
+import { HiTrendingUp, HiLightningBolt, HiChartBar } from 'react-icons/hi'
 import { MdOutlineWorkOutline, MdOutlineSchool } from 'react-icons/md'
 import { FiRefreshCw, FiAlertCircle } from 'react-icons/fi'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 // ── Fallback demo data (shown when not authenticated) ─────────────
 const DEMO = {
@@ -36,69 +36,89 @@ const StatCard = ({ icon: Icon, label, value, sub, color, loading }) => (
 
 const Dashboard = () => {
   const [data, setData] = useState(DEMO)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const { token, isAuth } = useAuth()
+  const [loading, setLoading] = useState(() => !!token)
+  const [error, setError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const fetchDashboard = async () => {
-    setLoading(true)
-    setError('')
-    if (!token) { setLoading(false); return }
+  // Re-runs on login/logout and when Refresh bumps refreshKey
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
 
-    try {
-      const assessmentRes = await fetch('/api/assessment/my/latest', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
-      const assessmentJson = assessmentRes ? await assessmentRes.json().catch(() => null) : null
+    const load = async () => {
+      try {
+        const assessmentRes = await fetch('/api/assessment/my/latest', { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+        const assessmentJson = assessmentRes ? await assessmentRes.json().catch(() => null) : null
 
-      // Career matches come from the assessment's own predictions, so each title keeps its own score
-      // (predictedCareers is already sorted by matchScore on the server)
-      const COLORS = ['#00d4ff', '#7c3aed', '#00ff88']
-      const predictions = (assessmentJson?.data?.predictedCareers || []).filter(p => p.careerPath)
-      const careers = predictions
-        .slice(0, 3)
-        .map((p, i) => ({
-          title: p.careerPath.title,
-          match: p.matchScore,
-          industry: p.careerPath.industry,
-          salary: `${fmtShortLkr(p.careerPath.salaryPotential?.midLevel?.min)}-${fmtShortLkr(p.careerPath.salaryPotential?.midLevel?.max)}`,
-          growth: `+${p.careerPath.growthRate}%`,
-          color: COLORS[i],
-        }))
+        // Career matches come from the assessment's own predictions, so each title keeps its own score
+        // (predictedCareers is already sorted by matchScore on the server)
+        const COLORS = ['#00d4ff', '#7c3aed', '#00ff88']
+        const predictions = (assessmentJson?.data?.predictedCareers || []).filter(p => p.careerPath)
+        const careers = predictions
+          .slice(0, 3)
+          .map((p, i) => ({
+            title: p.careerPath.title,
+            match: p.matchScore,
+            industry: p.careerPath.industry,
+            salary: `${fmtShortLkr(p.careerPath.salaryPotential?.midLevel?.min)}-${fmtShortLkr(p.careerPath.salaryPotential?.midLevel?.max)}`,
+            growth: `+${p.careerPath.growthRate}%`,
+            color: COLORS[i],
+          }))
 
-      // Build skill profile from assessment or GitHub languages
-      const assessment = assessmentJson?.data
-      const allSkills = assessment?.skillRatings?.length
-        ? assessment.skillRatings
-        : assessment?.githubData?.topLanguages?.map(l => ({ name: l.language, proficiency: Math.max(1, Math.round(l.percentage / 20)), category: 'Technical' }))
-        || []
-      const skillRatings = allSkills.slice(0, 6)
+        // Build skill profile from assessment or GitHub languages
+        const assessment = assessmentJson?.data
+        const allSkills = assessment?.skillRatings?.length
+          ? assessment.skillRatings
+          : assessment?.githubData?.topLanguages?.map(l => ({ name: l.language, proficiency: Math.max(1, Math.round(l.percentage / 20)), category: 'Technical' }))
+          || []
+        const skillRatings = allSkills.slice(0, 6)
 
-      const topMatch = careers[0]?.match || 0
-      const skillsCount = allSkills.length
-      const topGaps = predictions[0]?.gapSkills || []
+        const topMatch = careers[0]?.match || 0
+        const skillsCount = allSkills.length
+        const topGaps = predictions[0]?.gapSkills || []
 
-      setData({
-        stats: {
-          matchScore: careers.length ? `${topMatch}%` : '--',
-          skillsCount: skillsCount || '--',
-          growthRate: careers[0]?.growth || '--',
-          pathsFound: predictions.length || '--',
-        },
-        careers,
-        skills: skillRatings.map(s => ({ name: s.name, level: s.proficiency || 3, category: s.category || 'Technical' })),
-        nextSteps: [
-          { step: careers[0] ? `Pursue ${careers[0].title} - your top match` : 'Complete Assessment for personalized matches', icon: MdOutlineSchool, color: '#00d4ff' },
-          { step: topGaps.length ? `Bridge skill gaps: ${topGaps.slice(0, 2).join(', ')}` : 'Connect GitHub to detect your skills automatically', icon: HiLightningBolt, color: '#7c3aed' },
-          { step: 'Run Career Simulation for your top matched path', icon: HiTrendingUp, color: '#00ff88' },
-        ],
-      })
-    } catch (err) {
-      setError('Could not load live data. Showing demo.')
-    } finally {
-      setLoading(false)
+        if (cancelled) return
+        setData({
+          stats: {
+            matchScore: careers.length ? `${topMatch}%` : '--',
+            skillsCount: skillsCount || '--',
+            growthRate: careers[0]?.growth || '--',
+            pathsFound: predictions.length || '--',
+          },
+          careers,
+          skills: skillRatings.map(s => ({ name: s.name, level: s.proficiency || 3, category: s.category || 'Technical' })),
+          nextSteps: [
+            { step: careers[0] ? `Pursue ${careers[0].title} - your top match` : 'Complete Assessment for personalized matches', icon: MdOutlineSchool, color: '#00d4ff' },
+            {
+              step: topGaps.length
+                ? `Bridge skill gaps: ${topGaps.slice(0, 2).join(', ')}`
+                : assessment?.githubData?.username
+                  ? 'No major gaps: build a portfolio project that proves your top match'
+                  : 'Connect GitHub to detect your skills automatically',
+              icon: HiLightningBolt,
+              color: '#7c3aed',
+            },
+            { step: 'Run Career Simulation for your top matched path', icon: HiTrendingUp, color: '#00ff88' },
+          ],
+        })
+        setError('')
+      } catch {
+        if (!cancelled) setError('Could not load live data. Showing demo.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
 
-  useEffect(() => { fetchDashboard() }, [])
+    load()
+    return () => { cancelled = true }
+  }, [token, refreshKey])
+
+  const refreshDashboard = () => {
+    if (!token) return
+    setLoading(true)
+    setRefreshKey(key => key + 1)
+  }
 
   return (
     <div className="section-pad" style={{ position: 'relative', zIndex: 1 }}>
@@ -116,7 +136,7 @@ const Dashboard = () => {
             </h1>
             <p style={{ color: '#64748b' }}>Your personalized AI-driven career pathway overview</p>
           </div>
-          <button onClick={fetchDashboard} style={{ background: 'transparent', border: '1px solid rgba(0,212,255,0.2)', borderRadius: '10px', padding: '0.5rem 1rem', cursor: 'pointer', color: '#00d4ff', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', transition: 'all 0.2s' }}
+          <button onClick={refreshDashboard} style={{ background: 'transparent', border: '1px solid rgba(0,212,255,0.2)', borderRadius: '10px', padding: '0.5rem 1rem', cursor: 'pointer', color: '#00d4ff', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', transition: 'all 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,212,255,0.06)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
             <FiRefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> Refresh

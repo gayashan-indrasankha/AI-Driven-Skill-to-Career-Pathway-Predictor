@@ -139,6 +139,8 @@ const SimulationChat = () => {
   const [error, setError] = useState('')
   const [waitingForNext, setWaitingForNext] = useState(false)
   const bottomRef = useRef(null)
+  // Anonymous visitors get a session id from /start; signed-in users are tracked by account
+  const sessionIdRef = useRef(null)
 
   useEffect(() => {
     const loadCareers = async () => {
@@ -208,14 +210,15 @@ const SimulationChat = () => {
   const token = () => localStorage.getItem('token')
   const addMsg = (role, content) => setMessages(prev => [...prev, { role, content, id: Date.now() + Math.random() }])
 
-  const apiCall = async (endpoint, method = 'POST', body) => {
+  const apiCall = async (endpoint, method = 'POST', body = {}) => {
     const res = await fetch(`/api/simchat/${endpoint}`, {
       method,
       headers: { 'Content-Type': 'application/json', ...(token() && { Authorization: `Bearer ${token()}` }) },
-      ...(body && { body: JSON.stringify(body) }),
+      body: JSON.stringify({ ...body, ...(sessionIdRef.current && { sessionId: sessionIdRef.current }) }),
     })
     const json = await res.json()
     if (!json.success) throw new Error(json.error || 'Simulation API error')
+    if (json.data?.sessionId !== undefined) sessionIdRef.current = json.data.sessionId
     return json.data
   }
 

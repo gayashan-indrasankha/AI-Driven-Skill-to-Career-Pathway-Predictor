@@ -1,25 +1,30 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const router = express.Router();
 const { generateScenario, evaluateAnswer } = require('../services/geminiService');
+const { getSession, saveSession } = require('../services/sessionStore');
+const { optionalAuth } = require('../middleware/auth');
+const { aiLimiter } = require('../middleware/rateLimit');
 const Assessment = require('../models/Assessment');
 const CareerPath = require('../models/CareerPath');
 
-const sessions = new Map();
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
+const MAX_CAREER_LENGTH = 120;
+const MAX_ANSWER_LENGTH = 4000;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const optionalAuth = (req, _res, next) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      req.user = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
-    } catch {
-      req.user = null;
-    }
-  }
-  next();
+// Signed-in users have one simulation per account. Anonymous users get a random session id
+// from /start and send it back, so visitors sharing an IP (school/office Wi-Fi) stay separate.
+const sessionKeyFor = (req, sessionId) => {
+  if (req.user?.id) return `simchat:user:${req.user.id}`;
+  if (typeof sessionId === 'string' && UUID_PATTERN.test(sessionId)) return `simchat:anon:${sessionId}`;
+  return null;
 };
 
-const sessionKey = (req) => req.user?.id || req.ip || 'demo-session';
+const loadSession = async (req, sessionId) => {
+  const key = sessionKeyFor(req, sessionId);
+  return key ? { key, session: await getSession(key) } : { key: null, session: null };
+};
 
 const findCareerContext = async (career) => {
   if (!career) return null;
@@ -32,23 +37,29 @@ const findCareerContext = async (career) => {
   }).lean();
 };
 
-router.post('/start', optionalAuth, async (req, res) => {
+router.post('/start', optionalAuth, aiLimiter, async (req, res) => {
   const { career } = req.body;
-  if (!career) return res.status(400).json({ success: false, error: 'Career name is required' });
+  if (typeof career !== 'string' || !career.trim()) {
+    return res.status(400).json({ success: false, error: 'Career name is required' });
+  }
+  if (career.length > MAX_CAREER_LENGTH) {
+    return res.status(400).json({ success: false, error: 'Career name is too long' });
+  }
 
   try {
     const careerPath = await findCareerContext(career);
     const scenario = await generateScenario(careerPath?.title || career, careerPath?.marketSignal || {});
 
-    sessions.set(sessionKey(req), {
+    const sessionId = req.user?.id ? null : crypto.randomUUID();
+    await saveSession(sessionKeyFor(req, sessionId), {
       career: careerPath?.title || career,
-      careerPathId: careerPath?._id,
+      careerPathId: careerPath?._id?.toString() || null,
       scenario,
       history: [],
       cumulativeScore: 0,
       rounds: 0,
       startedAt: new Date(),
-    });
+    }, SESSION_TTL_MS);
 
     res.json({
       success: true,
@@ -60,6 +71,7 @@ router.post('/start', optionalAuth, async (req, res) => {
         career: careerPath?.title || career,
         marketSignal: careerPath?.marketSignal,
         sessionStarted: true,
+        sessionId,
       },
     });
   } catch (err) {
@@ -67,14 +79,19 @@ router.post('/start', optionalAuth, async (req, res) => {
   }
 });
 
-router.post('/answer', optionalAuth, async (req, res) => {
-  const { answer } = req.body;
-  if (!answer?.trim()) return res.status(400).json({ success: false, error: 'Answer is required' });
-
-  const session = sessions.get(sessionKey(req));
-  if (!session) return res.status(400).json({ success: false, error: 'No active session. Start a simulation first.' });
+router.post('/answer', optionalAuth, aiLimiter, async (req, res) => {
+  const { answer, sessionId } = req.body;
+  if (typeof answer !== 'string' || !answer.trim()) {
+    return res.status(400).json({ success: false, error: 'Answer is required' });
+  }
+  if (answer.length > MAX_ANSWER_LENGTH) {
+    return res.status(400).json({ success: false, error: `Answer must be under ${MAX_ANSWER_LENGTH} characters` });
+  }
 
   try {
+    const { key, session } = await loadSession(req, sessionId);
+    if (!session) return res.status(400).json({ success: false, error: 'No active session. Start a simulation first.' });
+
     const evaluation = await evaluateAnswer(session.career, session.scenario, answer.trim());
 
     session.history.push({ answer: answer.trim(), evaluation, timestamp: new Date() });
@@ -82,18 +99,24 @@ router.post('/answer', optionalAuth, async (req, res) => {
       (session.cumulativeScore * session.rounds + evaluation.score) / (session.rounds + 1)
     );
     session.rounds += 1;
+    await saveSession(key, session, SESSION_TTL_MS);
 
+    // Recorded in its own field so it never alters the GitHub aptitude score
     let savedToProfile = false;
     if (req.user?.id) {
-      const assessment = await Assessment.findOne({ user: req.user.id }).sort({ createdAt: -1 });
-      if (assessment) {
-        assessment.githubData = {
-          ...(assessment.githubData?.toObject?.() || assessment.githubData || {}),
-          contributionScore: Math.round((assessment.githubData?.contributionScore || 50) * 0.6 + session.cumulativeScore * 0.4),
-        };
-        await assessment.save();
-        savedToProfile = true;
-      }
+      const result = await Assessment.findOneAndUpdate(
+        { user: req.user.id, status: 'analyzed' },
+        {
+          simulationResults: {
+            career: session.career,
+            averageScore: session.cumulativeScore,
+            rounds: session.rounds,
+            updatedAt: new Date(),
+          },
+        },
+        { sort: { createdAt: -1 } }
+      );
+      savedToProfile = !!result;
     }
 
     res.json({
@@ -110,14 +133,15 @@ router.post('/answer', optionalAuth, async (req, res) => {
   }
 });
 
-router.post('/next', optionalAuth, async (req, res) => {
-  const session = sessions.get(sessionKey(req));
-  if (!session) return res.status(400).json({ success: false, error: 'No active session' });
-
+router.post('/next', optionalAuth, aiLimiter, async (req, res) => {
   try {
+    const { key, session } = await loadSession(req, req.body?.sessionId);
+    if (!session) return res.status(400).json({ success: false, error: 'No active session' });
+
     const careerPath = session.careerPathId ? await CareerPath.findById(session.careerPathId).lean() : null;
     const scenario = await generateScenario(session.career, careerPath?.marketSignal || {});
     session.scenario = scenario;
+    await saveSession(key, session, SESSION_TTL_MS);
 
     res.json({
       success: true,
@@ -135,18 +159,22 @@ router.post('/next', optionalAuth, async (req, res) => {
   }
 });
 
-router.get('/history', optionalAuth, (req, res) => {
-  const session = sessions.get(sessionKey(req));
-  if (!session) return res.json({ success: true, data: null });
-  res.json({
-    success: true,
-    data: {
-      career: session.career,
-      rounds: session.rounds,
-      cumulativeScore: session.cumulativeScore,
-      history: session.history,
-    },
-  });
+router.get('/history', optionalAuth, async (req, res) => {
+  try {
+    const { session } = await loadSession(req, req.query.sessionId);
+    if (!session) return res.json({ success: true, data: null });
+    res.json({
+      success: true,
+      data: {
+        career: session.career,
+        rounds: session.rounds,
+        cumulativeScore: session.cumulativeScore,
+        history: session.history,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 module.exports = router;

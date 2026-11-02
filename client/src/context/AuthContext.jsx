@@ -1,21 +1,37 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-
-const AuthContext = createContext(null)
+import { useState, useEffect, useCallback } from 'react'
+import { AuthContext } from './useAuth'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(localStorage.getItem('token') || null)
-  const [loading, setLoading] = useState(true)
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null)
+  // Only show a loading state when there is a stored token to validate
+  const [loading, setLoading] = useState(() => !!localStorage.getItem('token'))
 
-  // Validate token on mount
+  const login = useCallback((userData, tokenValue) => {
+    setUser(userData)
+    setToken(tokenValue)
+    localStorage.setItem('token', tokenValue)
+    localStorage.setItem('user', JSON.stringify(userData))
+  }, [])
+
+  const logout = useCallback(() => {
+    setUser(null)
+    setToken(null)
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }, [])
+
+  // Validate the token whenever it changes (page load, login)
   useEffect(() => {
+    if (!token) return
+    let cancelled = false
     const validate = async () => {
-      if (!token) { setLoading(false); return }
       try {
         const res = await fetch('/api/users/me', {
           headers: { Authorization: `Bearer ${token}` },
         })
         const json = await res.json()
+        if (cancelled) return
         if (json.success) {
           setUser(json.data)
         } else {
@@ -24,25 +40,12 @@ export const AuthProvider = ({ children }) => {
       } catch {
         // Keep token if network fails (offline)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     validate()
-  }, [])
-
-  const login = (userData, tokenValue) => {
-    setUser(userData)
-    setToken(tokenValue)
-    localStorage.setItem('token', tokenValue)
-    localStorage.setItem('user', JSON.stringify(userData))
-  }
-
-  const logout = () => {
-    setUser(null)
-    setToken(null)
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-  }
+    return () => { cancelled = true }
+  }, [token, logout])
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, logout, isAuth: !!token }}>
@@ -50,11 +53,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   )
 }
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
-}
-
-export default AuthContext

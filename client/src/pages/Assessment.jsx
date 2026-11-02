@@ -5,7 +5,7 @@ import { FiAlertCircle } from 'react-icons/fi'
 import GitHubExtractor from '../components/GitHubExtractor'
 import AuthModal from '../components/AuthModal'
 import MarketFitWizard from '../components/market-fit/MarketFitWizard'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const steps = [
   { id: 1, title: 'Basic Info', description: 'Tell us about yourself' },
@@ -330,24 +330,13 @@ const Assessment = () => {
   const [formData, setFormData] = useState({
     name: '', email: '', password: '', experience: '', education: '',
     skillCheck: {}, skillEvidence: '', interests: [], marketSelections: { domainId: '', domainLabel: '', proofId: '', proofLabel: '', tags: [] }, careerGoals: '', workPreference: '',
+    githubUsername: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [showAuth, setShowAuth] = useState(false)
-  const { token, user, login } = useAuth()
+  const { token, login } = useAuth()
   const navigate = useNavigate()
-
-  const toggleMarketSelection = (groupKey, optionId) => {
-    setFormData(prev => ({
-      ...prev,
-      marketSelections: {
-        ...prev.marketSelections,
-        [groupKey]: (prev.marketSelections[groupKey] || []).includes(optionId)
-          ? (prev.marketSelections[groupKey] || []).filter(id => id !== optionId)
-          : [...(prev.marketSelections[groupKey] || []), optionId],
-      },
-    }))
-  }
 
   const setDiagnosticAnswer = (questionId, score) => {
     setFormData(prev => ({ ...prev, skillCheck: { ...prev.skillCheck, [questionId]: score } }))
@@ -437,6 +426,7 @@ const Assessment = () => {
         },
         personalityTraits: [],
         quizResults: buildDiagnosticResults(formData),
+        ...(formData.githubUsername && { githubUsername: formData.githubUsername }),
       }
 
       const res = await fetch('/api/assessment', {
@@ -697,9 +687,11 @@ const Assessment = () => {
               <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.5rem' }}>GitHub Skill Scan</h2>
               <p style={{ color: '#475569', fontSize: '0.875rem', marginBottom: '1.75rem' }}>Auto-detect your skills and technical aptitude from your GitHub activity</p>
               <GitHubExtractor onSaved={(result) => {
-                if (result?.primaryInterests) {
-                  setFormData(p => ({ ...p, interests: [...new Set([...p.interests, ...result.primaryInterests])] }))
-                }
+                setFormData(p => ({
+                  ...p,
+                  githubUsername: result?.username || p.githubUsername,
+                  interests: [...new Set([...p.interests, ...(result?.primaryInterests || [])])],
+                }))
               }} />
             </div>
           )}

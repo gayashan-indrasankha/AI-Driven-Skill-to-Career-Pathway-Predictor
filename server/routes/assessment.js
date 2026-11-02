@@ -5,6 +5,11 @@ const { protect } = require('../middleware/auth');
 const Assessment = require('../models/Assessment');
 const User = require('../models/User');
 const CareerPath = require('../models/CareerPath');
+const {
+  getGitHubAnalysis,
+  isValidGitHubUsername,
+  toAssessmentGithubData,
+} = require('../services/githubService');
 
 const handleValidation = (req, res) => {
   const errors = validationResult(req);
@@ -147,8 +152,9 @@ router.post(
     if (!handleValidation(req, res)) return;
     try {
       // Never trust client-supplied owner, status, version, or computed predictions
+      // GitHub data is never taken from the client either; it is fetched from githubUsername below.
       // eslint-disable-next-line no-unused-vars
-      const { user, status, version, predictedCareers, _id, ...input } = req.body;
+      const { user, status, version, predictedCareers, _id, githubData, githubUsername, ...input } = req.body;
       const payload = {
         ...input,
         careerGoals: Array.isArray(req.body.careerGoals)
@@ -175,6 +181,21 @@ router.post(
         assessment.extractedInterests = [...new Set([...draftInterests, ...(payload.extractedInterests || [])])];
       } else {
         assessment = new Assessment(payload);
+      }
+
+      // A new user scans GitHub before their account exists, so the wizard sends the username
+      // with the final submit instead. A failed lookup must not block saving the assessment.
+      if (isValidGitHubUsername(githubUsername)) {
+        try {
+          const { analysis } = await getGitHubAnalysis(githubUsername);
+          assessment.githubData = toAssessmentGithubData(analysis);
+          assessment.extractedInterests = [
+            ...new Set([...(assessment.extractedInterests || []), ...analysis.primaryInterests]),
+          ];
+          await User.findByIdAndUpdate(req.user.id, { githubUrl: analysis.profile.profileUrl });
+        } catch (err) {
+          console.warn('[assessment] GitHub lookup skipped:', err.message);
+        }
       }
       payload.extractedInterests = assessment.extractedInterests;
 
@@ -210,9 +231,13 @@ router.get('/my', protect, async (req, res) => {
 
 router.get('/my/latest', protect, async (req, res) => {
   try {
-    const assessment = await Assessment.findOne({ user: req.user.id })
+    // Prefer the newest analyzed assessment: a later GitHub re-scan creates an empty draft,
+    // which must not hide the user's existing career matches. Fall back to a draft only
+    // when nothing has been analyzed yet (e.g. GitHub scanned, wizard not finished).
+    const latest = (filter) => Assessment.findOne({ user: req.user.id, ...filter })
       .populate('predictedCareers.careerPath')
       .sort({ createdAt: -1 });
+    const assessment = (await latest({ status: 'analyzed' })) || (await latest({}));
     if (!assessment) return res.status(404).json({ success: false, error: 'No assessment found' });
     res.json({ success: true, data: assessment });
   } catch (err) {

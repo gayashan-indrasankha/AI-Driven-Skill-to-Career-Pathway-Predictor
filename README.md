@@ -267,11 +267,12 @@ flowchart TD
 | Authentication | JWT (7-day expiry), bcrypt password hashing with 12 salt rounds, password field excluded from every query by default |
 | Authorisation | `requireAdmin` middleware that checks the role **in the database** on each request, so a demoted admin loses access immediately; it protects every career and skill write route |
 | Mass-assignment protection | Request bodies are whitelisted, so clients cannot set `role`, `isActive`, assessment owner, status or computed predictions |
-| Account lifecycle | Soft-delete deactivation, and deactivated accounts are blocked at login |
+| Account lifecycle | Soft-delete deactivation; deactivated accounts are blocked at login and their existing tokens stop working immediately |
 | Input validation | `express-validator` on auth, profile, career and assessment routes; GitHub usernames validated against GitHub's own format rules |
 | Transport and headers | `helmet` security headers, CORS allow-list, 10 MB body limit |
 | XSS | AI replies are HTML-escaped before rendering, so model output can never run as markup in the browser |
 | Secrets | API keys only in a git-ignored `.env`; the Gemini key travels in a request header, not the URL |
+| Abuse and cost control | Per-user/IP rate limits on every Gemini-backed route, and a server-side guest chat quota |
 | Errors | Central error handler mapping Mongoose validation, cast and duplicate-key errors and JWT errors to clean HTTP status codes |
 
 ---
@@ -367,6 +368,7 @@ CLIENT_URL=http://localhost:5173
 GEMINI_API_KEY=your_key_here          # optional: without it, AI features use the offline engine
 GEMINI_MODEL=gemini-flash-lite-latest
 GITHUB_TOKEN=                         # optional: raises the GitHub rate limit
+TRUST_PROXY=                          # set to 1 only when running behind nginx/a reverse proxy
 ```
 
 Seed the career data and start both servers:
@@ -377,6 +379,12 @@ npm run dev
 ```
 
 Open http://localhost:5173. The API runs on http://localhost:5000, and `/api/health` reports database status.
+
+Run the API test suite (needs MongoDB; it uses and then drops a separate `career_pathway_test` database):
+
+```bash
+npm test
+```
 
 ---
 
@@ -392,7 +400,7 @@ The career dataset (demand scores, LKR salary bands, employer types, business us
 
 ## Roadmap
 
-- Automated test suite (Jest and Supertest for the API, React Testing Library for the UI)
+- UI tests (React Testing Library); the API already has an automated suite (`npm test`)
 - Persist chat and simulation sessions in MongoDB instead of server memory
 - Rate limiting on authentication and AI endpoints
 - Responsive navigation for small screens

@@ -52,7 +52,15 @@ const LANGUAGE_DOMAIN_MAP = {
   HTML: ['Web Development', 'Frontend Development'],
   CSS: ['Web Development', 'Frontend Development', 'UI Design'],
   Vue: ['Frontend Development', 'Web Development'],
-  Jupyter: ['Data Science', 'AI/Machine Learning', 'Research'],
+  // GitHub reports notebooks as "Jupyter Notebook"
+  'Jupyter Notebook': ['Data Science', 'AI/Machine Learning', 'Research'],
+  TSQL: ['Data Engineering', 'Backend Development'],
+  PLpgSQL: ['Data Engineering', 'Backend Development'],
+  PowerShell: ['DevOps', 'Automation'],
+  HCL: ['Cloud Infrastructure', 'DevOps'],
+  Dockerfile: ['DevOps', 'Cloud Infrastructure'],
+  SCSS: ['Frontend Development', 'UI Design'],
+  Svelte: ['Frontend Development', 'Web Development'],
 };
 
 // ── Technical Aptitude Score Algorithm ───────────────────────────
@@ -207,4 +215,53 @@ const analyzeGitHubProfile = async (username) => {
   };
 };
 
-module.exports = { analyzeGitHubProfile };
+// ── In-memory cache: username → { data, cachedAt } ───────────────
+const cache = new Map();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const getCachedAnalysis = (username) => {
+  const entry = cache.get(username.toLowerCase());
+  if (!entry) return null;
+  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+    cache.delete(username.toLowerCase());
+    return null;
+  }
+  return entry.data;
+};
+
+// Cached wrapper used by every route, so a scan in the wizard and the final submit
+// don't each spend a GitHub API call.
+const getGitHubAnalysis = async (username) => {
+  const cached = getCachedAnalysis(username);
+  if (cached) return { analysis: cached, cached: true };
+  const analysis = await analyzeGitHubProfile(username);
+  cache.set(username.toLowerCase(), { data: analysis, cachedAt: Date.now() });
+  return { analysis, cached: false };
+};
+
+const GITHUB_USERNAME_PATTERN = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+const isValidGitHubUsername = (username) =>
+  typeof username === 'string' && username.length <= 39 && GITHUB_USERNAME_PATTERN.test(username);
+
+// Shape an analysis to match Assessment.githubData
+const toAssessmentGithubData = (analysis) => ({
+  username: analysis.profile.username,
+  profileUrl: analysis.profile.profileUrl,
+  publicRepos: analysis.profile.publicRepos,
+  followers: analysis.profile.followers,
+  topLanguages: analysis.topLanguages.map(l => ({
+    language: l.language,
+    percentage: l.percentage,
+  })),
+  pinnedRepos: analysis.pinnedRepos,
+  contributionScore: analysis.technicalAptitudeScore,
+  fetchedAt: new Date(),
+});
+
+module.exports = {
+  analyzeGitHubProfile,
+  getGitHubAnalysis,
+  isValidGitHubUsername,
+  toAssessmentGithubData,
+  GITHUB_USERNAME_PATTERN,
+};

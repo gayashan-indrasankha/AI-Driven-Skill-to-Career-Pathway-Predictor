@@ -6,7 +6,12 @@ const https = require('https');
 // fast model. Override with GEMINI_MODEL in .env if needed.
 const DEFAULT_GEMINI_MODEL = 'gemini-flash-lite-latest';
 const { protect } = require('../middleware/auth');
+const { aiLimiter, guestChatLimiter } = require('../middleware/rateLimit');
 const Assessment = require('../models/Assessment');
+const { getSession, saveSession, deleteSession } = require('../services/sessionStore');
+
+const MAX_MESSAGE_LENGTH = 2000;
+const GUEST_HISTORY_LIMIT = 10;
 
 const AI_NAME = 'PathGuide AI';
 
@@ -221,7 +226,7 @@ const localCareerCards = [
 
   // ── 5. NETWORK ENGINEER ──────────────────────────────────────────
   {
-    keywords: ['network engineer', 'network administrator', 'cisco', 'ccna', 'ccnp', 'router', 'switch',
+    keywords: ['network engineer', 'network administrator', 'cisco', 'ccna', 'ccnp', 'router', 'network switch',
                'firewall', 'tcp/ip', 'vlan', 'ospf', 'bgp', 'wan', 'lan', 'vpn', 'subnetting', 'networking'],
     title: 'Network Engineer',
     salary: 'LKR 80,000–350,000 per month',
@@ -871,10 +876,24 @@ const localCareerCards = [
 const normalise = (value = '') => value.toString().toLowerCase();
 const bulletList = (items = []) => items.map(item => `- ${item}`).join('\n');
 
+// Whole-word matching, so short terms like "lan", "ml" or "earn" don't fire inside
+// "Sri Lanka", "html" or "learn". A plural "s"/"es" is allowed; a trailing "*" marks a
+// stem that may be followed by more letters ("commerciali*" → commercialise, commercialization).
+const termPatterns = new Map();
+const hasTerm = (text, term) => {
+  if (!termPatterns.has(term)) {
+    const isStem = term.endsWith('*');
+    const core = (isStem ? term.slice(0, -1) : term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    termPatterns.set(term, new RegExp(`(?:^|[^a-z0-9])${core}${isStem ? '' : '(?:s|es)?(?![a-z0-9])'}`));
+  }
+  return termPatterns.get(term).test(text);
+};
+const hasAny = (text, terms) => terms.some(term => hasTerm(text, term));
+
 const pickCareerCard = (message = '') => {
   const text = normalise(message);
   // Return null if no keyword matches — callers must NOT silently default to the AI/ML card.
-  return localCareerCards.find(card => card.keywords.some(keyword => text.includes(keyword))) || null;
+  return localCareerCards.find(card => hasAny(text, card.keywords)) || null;
 };
 
 const buildAssessmentSummaryReply = (assessmentContext) => {
@@ -1051,44 +1070,42 @@ const buildLocalReply = (message, assessmentContext) => {
   const text = normalise(message);
 
   // ── 1. Assessment / profile questions ───────────────────────────────────
-  if (text.includes('assessment') || text.includes('analyze my') || text.includes('analyse my')
-      || text.includes('my result') || text.includes('suggest next step') || text.includes('next step')) {
+  if (hasAny(text, ['assessment', 'analyze my', 'analyse my', 'my result', 'next step'])) {
     return buildAssessmentSummaryReply(assessmentContext);
   }
 
+  const SALARY_TERMS = ['salary', 'salaries', 'pay*', 'earn*', 'income', 'lkr'];
+  const CERT_TERMS = ['certification', 'certificate', 'cert'];
+
   // ── 2. SPECIFIC SUGGESTION CHIP HANDLERS (checked before keyword matching) ──
   // "Which Sri Lankan tech career has the best LKR potential?"
-  if ((text.includes('best') || text.includes('highest') || text.includes('top')) &&
-      (text.includes('lkr') || text.includes('salary') || text.includes('pay') || text.includes('earn') || text.includes('potential'))) {
+  if (hasAny(text, ['best', 'highest', 'top']) && hasAny(text, [...SALARY_TERMS, 'potential'])) {
     return buildBestLkrReply();
   }
 
   // "What skills do I need for ML engineering?"
-  if ((text.includes('skill') || text.includes('what do i need') || text.includes('require'))
-      && (text.includes('ml') || text.includes('machine learning') || text.includes('ai engineer'))) {
+  if (hasAny(text, ['skill', 'what do i need', 'require*'])
+      && hasAny(text, ['ml', 'machine learning', 'ai engineer*'])) {
     return buildMlSkillsReply();
   }
 
   // "Build a roadmap for a school dropout dashboard"
-  if (text.includes('school dropout') || text.includes('dropout dashboard') || text.includes('dropout risk')) {
+  if (hasAny(text, ['school dropout', 'dropout dashboard', 'dropout risk'])) {
     return buildSchoolDropoutRoadmapReply();
   }
 
   // "What certification should I get first?" — no specific role mentioned
-  if ((text.includes('certification') || text.includes('certificate') || text.includes('cert'))
-      && (text.includes('first') || text.includes('which') || text.includes('best') || text.includes('start') || text.includes('should i'))) {
+  if (hasAny(text, CERT_TERMS) && hasAny(text, ['first', 'which', 'best', 'start', 'should i'])) {
     return buildFirstCertReply(assessmentContext);
   }
 
   // "How can I turn my prototype into a business pitch?"
-  if (text.includes('prototype') || text.includes('business pitch') || text.includes('pitch')
-      || text.includes('commerciali') || text.includes('turn my')) {
+  if (hasAny(text, ['prototype', 'pitch', 'commerciali*', 'turn my'])) {
     return buildPitchReply();
   }
 
   // ── 3. Salary comparison — general (no role specified) ───────────────────
-  if ((text.includes('salary') || text.includes('earn') || text.includes('income'))
-      && (text.includes('compare') || text.includes('which') || text.includes('best') || text.includes('highest'))) {
+  if (hasAny(text, ['salary', 'salaries', 'earn*', 'income']) && hasAny(text, ['compare', 'which', 'best', 'highest'])) {
     return buildBestLkrReply();
   }
 
@@ -1105,23 +1122,23 @@ const buildLocalReply = (message, assessmentContext) => {
     : '';
 
   // ── 5. Role-specific certification questions ─────────────────────────────
-  if (text.includes('certification') || text.includes('certificate') || text.includes('cert')) {
+  if (hasAny(text, CERT_TERMS)) {
     return `**${AI_NAME} — Certifications for ${card.title}** 🏆\n\n**Best certifications to get (in order):**\n${card.certifications.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n💡 **Pro tip:** Always pair each cert with a working project. A certificate proves you studied. A project proves you can do the work.\n\n**Your portfolio project:**\n📌 ${card.project}\n\n**Sri Lanka salary once certified:** ${card.salary}${personalLine}`;
   }
 
   // ── 6. Role-specific salary questions ────────────────────────────────────
-  if (text.includes('salary') || text.includes('pay') || text.includes('earn') || text.includes('income') || text.includes('lkr')) {
+  if (hasAny(text, SALARY_TERMS)) {
     return `**${AI_NAME} — Salary Insights: ${card.title}** 💰\n\n**Sri Lanka salary range:** ${card.salary}\n\n**How to reach the higher end of the range:**\n\n${card.roadmap.slice(3).map((s, i) => `${i + 4}️⃣ ${s}`).join('\n\n')}\n\n**Skills that command higher salaries:**\n${card.skills.slice(0, 3).map(s => `• ${s}`).join('\n')}\n\n**Portfolio project that justifies a higher salary:**\n📌 ${card.project}${personalLine}`;
   }
 
   // ── 7. Role-specific skills questions ────────────────────────────────────
-  if (text.includes('skill') || text.includes('what do') || text.includes('require') || text.includes('need')) {
+  if (hasAny(text, ['skill', 'what do', 'require*', 'need'])) {
     return `**${AI_NAME} — Skills for ${card.title}** 💡\n\n**Essential skills to build:**\n${card.skills.map(s => `• ${s}`).join('\n')}\n\n**Where to start — your first 3 steps:**\n\n1️⃣ ${card.roadmap[0]}\n\n2️⃣ ${card.roadmap[1]}\n\n3️⃣ ${card.roadmap[2]}\n\n**Prove your skills with this project:**\n📌 ${card.project}\n\n**Sri Lanka salary:** ${card.salary}${personalLine}`;
   }
 
   // ── 8. Roadmap / learning path questions ─────────────────────────────────
-  const isRoadmapRequest = ['roadmap', 'learn', 'become', 'start', 'begin', 'how to', 'guide',
-    'transition', 'steps', 'path', 'get into', 'break into', 'switch'].some(kw => text.includes(kw));
+  const isRoadmapRequest = hasAny(text, ['roadmap', 'learn*', 'become', 'start*', 'begin*', 'how to', 'guide',
+    'transition', 'step', 'path', 'get into', 'break into', 'switch*']);
 
   if (isRoadmapRequest) {
     const roadmapSteps = card.roadmap.map((step, i) => `${i + 1}️⃣ ${step}`).join('\n\n');
@@ -1170,19 +1187,18 @@ const getReply = async ({ contents, message, assessmentContext }) => {
   }
 };
 
-const chatSessions = new Map();
 const MAX_HISTORY = 20;
+const CHAT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // conversations expire after a week of inactivity
+const chatKey = (userId) => `nexus:${userId}`;
 
 // ─────────────────────────────────────────────────────────────────
 // @POST /api/nexus/chat
 // Send a message to PathGuide AI
 // ─────────────────────────────────────────────────────────────────
-router.post('/chat', protect, async (req, res) => {
+router.post('/chat', protect, aiLimiter, async (req, res) => {
   const { message } = req.body;
-  if (!message?.trim()) return res.status(400).json({ success: false, error: 'Message is required' });
-
-  // Load history
-  let history = chatSessions.get(req.user.id) || [];
+  if (typeof message !== 'string' || !message.trim()) return res.status(400).json({ success: false, error: 'Message is required' });
+  if (message.length > MAX_MESSAGE_LENGTH) return res.status(400).json({ success: false, error: `Message must be under ${MAX_MESSAGE_LENGTH} characters` });
 
   // Build assessment context (latest analyzed assessment)
   let assessmentContext = null;
@@ -1202,11 +1218,13 @@ router.post('/chat', protect, async (req, res) => {
           gapSkills: p.gapSkills?.slice(0, 3),
         })) || [],
         aptitudeScore: assessment.githubData?.contributionScore || null,
+        simulationScore: assessment.simulationResults?.averageScore ?? null,
       };
     }
   } catch (_) { /* Non-critical — continue without context */ }
 
   try {
+    let history = (await getSession(chatKey(req.user.id)))?.history || [];
     const contents = buildContents(
       history.length > MAX_HISTORY ? history.slice(-MAX_HISTORY) : history,
       message.trim(),
@@ -1226,7 +1244,7 @@ router.post('/chat', protect, async (req, res) => {
       { role: 'user', content: message.trim() },
       { role: 'assistant', content: reply },
     ].slice(-MAX_HISTORY);
-    chatSessions.set(req.user.id, history);
+    await saveSession(chatKey(req.user.id), { history }, CHAT_TTL_MS);
 
     res.json({ success: true, data: { reply, historyLength: history.length, mode } });
   } catch (err) {
@@ -1238,21 +1256,31 @@ router.post('/chat', protect, async (req, res) => {
 // @DELETE /api/nexus/chat
 // Clear conversation history
 // ─────────────────────────────────────────────────────────────────
-router.delete('/chat', protect, (req, res) => {
-  chatSessions.delete(req.user.id);
-  res.json({ success: true, message: 'Conversation cleared' });
+router.delete('/chat', protect, async (req, res) => {
+  try {
+    await deleteSession(chatKey(req.user.id));
+    res.json({ success: true, message: 'Conversation cleared' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────
-// @POST /api/nexus/chat/guest  ← No auth, stateless, 5-message limit
+// @POST /api/nexus/chat/guest  ← No auth, stateless, limit counted per IP on the server
 // ─────────────────────────────────────────────────────────────────
-router.post('/chat/guest', async (req, res) => {
+router.post('/chat/guest', guestChatLimiter, aiLimiter, async (req, res) => {
   const { message, history = [] } = req.body;
-  if (!message?.trim()) return res.status(400).json({ success: false, error: 'Message is required' });
-  if (history.length > 10) return res.status(429).json({ success: false, error: 'Guest limit reached. Please sign in for unlimited access.' });
+  if (typeof message !== 'string' || !message.trim()) return res.status(400).json({ success: false, error: 'Message is required' });
+  if (message.length > MAX_MESSAGE_LENGTH) return res.status(400).json({ success: false, error: `Message must be under ${MAX_MESSAGE_LENGTH} characters` });
+
+  // History is client-supplied context only: keep the recent, well-formed turns
+  const safeHistory = (Array.isArray(history) ? history : [])
+    .filter(msg => msg && typeof msg.content === 'string' && msg.content.trim())
+    .slice(-GUEST_HISTORY_LIMIT)
+    .map(msg => ({ role: msg.role === 'user' ? 'user' : 'assistant', content: msg.content.slice(0, MAX_MESSAGE_LENGTH) }));
 
   try {
-    const contents = buildContents(history, message.trim(), null);
+    const contents = buildContents(safeHistory, message.trim(), null);
     const { reply, mode } = await getReply({
       contents,
       message: message.trim(),
@@ -1265,3 +1293,7 @@ router.post('/chat/guest', async (req, res) => {
 });
 
 module.exports = router;
+
+// Exposed for unit tests
+module.exports.hasTerm = hasTerm;
+module.exports.buildLocalReply = buildLocalReply;
