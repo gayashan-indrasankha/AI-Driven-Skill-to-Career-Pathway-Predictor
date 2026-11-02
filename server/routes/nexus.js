@@ -1193,7 +1193,7 @@ router.post('/chat', protect, async (req, res) => {
       .lean();
     if (assessment) {
       assessmentContext = {
-        topSkills: assessment.skillRatings?.slice(0, 5).map(s => `${s.name} (${s.proficiency}/5)`) || [],
+        topSkills: [...(assessment.skillRatings || [])].sort((a, b) => b.proficiency - a.proficiency).map(s => `${s.name} (${s.proficiency}/5)`) || [],
         interests: assessment.extractedInterests?.slice(0, 5) || [],
         topLanguages: assessment.githubData?.topLanguages?.slice(0, 3).map(l => l.language) || [],
         predictedCareers: assessment.predictedCareers?.slice(0, 3).map(p => ({
@@ -1210,7 +1210,8 @@ router.post('/chat', protect, async (req, res) => {
     const contents = buildContents(
       history.length > MAX_HISTORY ? history.slice(-MAX_HISTORY) : history,
       message.trim(),
-      history.length === 0 ? assessmentContext : null, // inject context only on first message
+      // Prepended per request (never stored in history), so the profile survives page reloads and history trimming
+      assessmentContext,
     );
 
     const { reply, mode } = await getReply({

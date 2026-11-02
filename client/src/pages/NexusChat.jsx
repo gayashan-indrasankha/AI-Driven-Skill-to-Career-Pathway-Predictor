@@ -5,11 +5,19 @@ import { useAuth } from '../context/AuthContext'
 const AI_NAME = 'PathGuide AI'
 
 // ── Markdown-lite renderer ────────────────────────────────────────
+// AI replies are injected as HTML below, so escape first to keep model output from running as markup
+const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
 const renderText = (text) => {
   const lines = text.split('\n')
-  return lines.map((line, i) => {
+  return lines.map((rawLine, i) => {
+    const line = escapeHtml(rawLine.trim())
     // Bold: **text**
     const boldLine = line.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#e2e8f0">$1</strong>')
+    // Markdown heading: ## / ###
+    if (/^#{1,4}\s/.test(line)) return <div key={i} dangerouslySetInnerHTML={{ __html: boldLine.replace(/^#{1,4}\s/, '') }} style={{ color: '#00d4ff', fontSize: '0.92rem', fontWeight: 700, margin: '0.6rem 0 0.3rem' }} />
+    // Horizontal rule: ---
+    if (/^(-{3,}|\*{3,}|━+)$/.test(line)) return <div key={i} style={{ height: 1, background: 'rgba(0,212,255,0.12)', margin: '0.6rem 0' }} />
     // Numbered list
     if (/^\d+\.\s/.test(line)) return <div key={i} dangerouslySetInnerHTML={{ __html: `<span style="color:#00d4ff;font-weight:700">${line.match(/^\d+/)[0]}.</span> ${boldLine.replace(/^\d+\.\s/, '')}` }} style={{ paddingLeft: '0.25rem', marginBottom: '0.25rem', fontSize: '0.875rem', lineHeight: 1.6 }} />
     // Bullet

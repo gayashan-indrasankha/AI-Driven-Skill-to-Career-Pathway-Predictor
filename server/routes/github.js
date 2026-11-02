@@ -71,6 +71,10 @@ router.post('/extract-and-save', protect, async (req, res) => {
   if (!username || typeof username !== 'string') {
     return res.status(400).json({ success: false, error: 'GitHub username is required' });
   }
+  // Same rules as the public analyze route; the username is interpolated into GitHub API URLs
+  if (username.length > 39 || !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(username)) {
+    return res.status(400).json({ success: false, error: 'Invalid GitHub username format' });
+  }
 
   try {
     // Use cache if available
