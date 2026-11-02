@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { query, body, param, validationResult } = require('express-validator');
-const { protect } = require('../middleware/auth');
+const { protect, requireAdmin } = require('../middleware/auth');
 const CareerPath = require('../models/CareerPath');
 
 const handleValidation = (req, res) => {
@@ -43,7 +43,8 @@ router.get(
       const [careers, total] = await Promise.all([
         CareerPath.find(filter)
           .select('-pathwaySteps -relatedPaths')   // omit heavy fields in list view
-          .sort({ growthRate: -1, demandLevel: -1 })
+          // demandLevel is a string enum, so sorting on it is alphabetical; use the numeric score instead
+          .sort({ 'marketSignal.sriLankaDemandScore': -1, growthRate: -1 })
           .skip(skip)
           .limit(parseInt(limit)),
         CareerPath.countDocuments(filter),
@@ -118,6 +119,7 @@ router.get('/:idOrSlug', async (req, res) => {
 router.post(
   '/',
   protect,
+  requireAdmin,
   [
     body('title').trim().notEmpty().withMessage('Title is required'),
     body('description').trim().notEmpty().withMessage('Description is required'),
@@ -141,6 +143,7 @@ router.post(
 router.put(
   '/:id',
   protect,
+  requireAdmin,
   [param('id').isMongoId().withMessage('Invalid career ID')],
   async (req, res) => {
     if (!handleValidation(req, res)) return;
@@ -160,7 +163,7 @@ router.put(
 // ─────────────────────────────────────────────────────────────────
 // @DELETE /api/careers/:id  ← Soft-delete (admin)
 // ─────────────────────────────────────────────────────────────────
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, requireAdmin, async (req, res) => {
   try {
     const career = await CareerPath.findByIdAndUpdate(
       req.params.id,

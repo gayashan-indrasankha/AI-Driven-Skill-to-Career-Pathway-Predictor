@@ -1,5 +1,8 @@
 const https = require('https');
 
+// gemini-1.5-* models were retired by Google; override with GEMINI_MODEL in .env if needed
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+
 const fallbackScenarios = {
   ai: {
     situation: 'A tea factory wants to reduce manual grading errors before export packaging. They can provide 500 labelled leaf images and want a low-cost proof of concept in two weeks.',
@@ -57,14 +60,18 @@ const callGemini = (prompt) => {
 
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.75, maxOutputTokens: 650 },
+      generationConfig: { temperature: 0.75, maxOutputTokens: 2048 },
     });
 
     const options = {
       hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      path: `/v1beta/models/${process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL}:generateContent`,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'x-goog-api-key': apiKey,
+      },
     };
 
     const req = https.request(options, (res) => {
@@ -84,6 +91,7 @@ const callGemini = (prompt) => {
       });
     });
     req.on('error', reject);
+    req.setTimeout(15000, () => req.destroy(new Error('AI request timed out')));
     req.write(body);
     req.end();
   });
@@ -114,7 +122,8 @@ Return JSON exactly:
 
   try {
     return parseJson(await callGemini(prompt));
-  } catch {
+  } catch (err) {
+    console.warn('[gemini] scenario fallback:', err.message);
     return pickFallbackScenario(career);
   }
 };
@@ -140,7 +149,8 @@ Return JSON exactly:
 
   try {
     return parseJson(await callGemini(prompt));
-  } catch {
+  } catch (err) {
+    console.warn('[gemini] evaluation fallback:', err.message);
     const answer = userAnswer.toLowerCase();
     let score = 45;
     if (answer.length > 180) score += 12;

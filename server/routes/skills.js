@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, requireAdmin } = require('../middleware/auth');
 const Skill = require('../models/Skill');
 
 // @GET /api/skills
@@ -29,7 +29,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // @POST /api/skills (admin only - simplified)
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, requireAdmin, async (req, res) => {
   try {
     const skill = await Skill.create(req.body);
     res.status(201).json(skill);

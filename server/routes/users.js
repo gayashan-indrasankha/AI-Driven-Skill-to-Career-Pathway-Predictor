@@ -28,7 +28,9 @@ router.post(
     try {
       const existing = await User.findOne({ email: req.body.email });
       if (existing) return res.status(409).json({ success: false, error: 'Email already in use' });
-      const user = await User.create(req.body);
+      // Whitelist fields so callers cannot set role, isActive, assessments, etc.
+      const { name, email, password } = req.body;
+      const user = await User.create({ name, email, password });
       res.status(201).json({ success: true, data: user });
     } catch (err) {
       if (err.code === 11000) return res.status(409).json({ success: false, error: 'Duplicate field value' });

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const https = require('https');
+
+// gemini-1.5-* models were retired by Google; override with GEMINI_MODEL in .env if needed
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const { protect } = require('../middleware/auth');
 const Assessment = require('../models/Assessment');
 
@@ -31,14 +34,18 @@ RULES:
 7. Sign off longer responses with a motivational micro-note.`,
         }],
       },
-      generationConfig: { temperature: 0.75, maxOutputTokens: 600 },
+      generationConfig: { temperature: 0.75, maxOutputTokens: 2048 },
     });
 
     const options = {
       hostname: 'generativelanguage.googleapis.com',
-      path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      path: `/v1beta/models/${process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL}:generateContent`,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'x-goog-api-key': apiKey,
+      },
     };
 
     const req = https.request(options, (res) => {
@@ -1157,6 +1164,7 @@ const getReply = async ({ contents, message, assessmentContext }) => {
   try {
     return { reply: await callGemini(contents), mode: 'gemini' };
   } catch (err) {
+    console.warn('[gemini] chat fallback:', err.message);
     return { reply: buildLocalReply(message, assessmentContext), mode: 'local-fallback' };
   }
 };

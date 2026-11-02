@@ -16,7 +16,7 @@ const steps = [
 ]
 
 const skillCategories = [
-  { category: 'Technical', skills: ['Python', 'SQL', 'Excel', 'Linux', 'Docker', 'Cloud Deployment', 'Networking', 'Electronics', 'Arduino', 'Sensors'] },
+  { category: 'Technical', skills: ['Python', 'SQL', 'Excel', 'Linux', 'Docker', 'Cloud Deployment', 'Networking', 'Electronics', 'Arduino', 'Sensors', 'C++', 'CI/CD', 'MLOps', 'Power BI', 'Figma'] },
   { category: 'Applied Science', skills: ['Machine Learning', 'Statistics', 'Data Analysis', 'Security', 'Risk Assessment', 'User Research', 'UX Design'] },
   { category: 'Soft Skills', skills: ['Communication', 'Problem Solving', 'Leadership', 'Teamwork'] },
 ]
@@ -33,6 +33,7 @@ const diagnosticQuestions = [
       { name: 'Python', weight: 1 },
       { name: 'Excel', weight: 0.7 },
       { name: 'Data Analysis', weight: 1 },
+      { name: 'Statistics', weight: 0.6 },
     ],
     options: [
       { score: 1, label: 'I cannot do this yet.' },
@@ -49,6 +50,7 @@ const diagnosticQuestions = [
     measures: [
       { name: 'SQL', weight: 1 },
       { name: 'Data Analysis', weight: 0.8 },
+      { name: 'Power BI', weight: 0.8 },
     ],
     options: [
       { score: 1, label: 'I cannot write queries.' },
@@ -65,6 +67,7 @@ const diagnosticQuestions = [
     measures: [
       { name: 'Machine Learning', weight: 1 },
       { name: 'Python', weight: 0.8 },
+      { name: 'Statistics', weight: 0.8 },
     ],
     options: [
       { score: 1, label: 'I cannot train models yet.' },
@@ -87,6 +90,71 @@ const diagnosticQuestions = [
       { score: 2, label: 'I can follow deployment steps on a platform.' },
       { score: 4, label: 'I can configure env, DB, and logs.' },
       { score: 5, label: 'I can containerize and run reliable demos.' },
+    ],
+  },
+  {
+    id: 'linux_network',
+    category: 'Infrastructure',
+    title: 'Run and troubleshoot a Linux server',
+    scenario: 'Set up a server, open the right ports, and fix a connection problem.',
+    measures: [
+      { name: 'Linux', weight: 1 },
+      { name: 'Networking', weight: 1 },
+    ],
+    options: [
+      { score: 1, label: 'I have not used Linux or networking tools yet.' },
+      { score: 2, label: 'I can run basic commands and check IP/ping.' },
+      { score: 4, label: 'I can configure services, firewalls, and diagnose DNS issues.' },
+      { score: 5, label: 'I can harden servers and trace network faults end to end.' },
+    ],
+  },
+  {
+    id: 'release_pipeline',
+    category: 'Deployment',
+    title: 'Automate builds and releases',
+    scenario: 'Make every code or model change test and deploy itself automatically.',
+    measures: [
+      { name: 'CI/CD', weight: 1 },
+      { name: 'MLOps', weight: 0.7 },
+      { name: 'Docker', weight: 0.5 },
+    ],
+    options: [
+      { score: 1, label: 'I deploy manually or not at all.' },
+      { score: 2, label: 'I can follow a template to run tests on push.' },
+      { score: 4, label: 'I can build a pipeline that tests, builds, and deploys.' },
+      { score: 5, label: 'I can version, monitor, and roll back apps or ML models.' },
+    ],
+  },
+  {
+    id: 'figma_prototype',
+    category: 'UX',
+    title: 'Prototype a screen flow',
+    scenario: 'Turn a user problem into a clickable prototype for testing.',
+    measures: [
+      { name: 'Figma', weight: 1 },
+      { name: 'UX Design', weight: 0.6 },
+    ],
+    options: [
+      { score: 1, label: 'I have not designed screens yet.' },
+      { score: 2, label: 'I can sketch screens or edit a template.' },
+      { score: 4, label: 'I can build a clickable multi-screen prototype.' },
+      { score: 5, label: 'I can build reusable components and a tested design system.' },
+    ],
+  },
+  {
+    id: 'stakeholder_pitch',
+    category: 'Communication',
+    title: 'Explain results to a non-technical client',
+    scenario: 'Present findings or a prototype to a manager and agree next steps.',
+    measures: [
+      { name: 'Communication', weight: 1 },
+      { name: 'Problem Solving', weight: 0.6 },
+    ],
+    options: [
+      { score: 1, label: 'I find it hard to explain technical work.' },
+      { score: 2, label: 'I can explain my work to classmates.' },
+      { score: 4, label: 'I can present clear findings and handle questions.' },
+      { score: 5, label: 'I can persuade decision makers with evidence and LKR impact.' },
     ],
   },
   {
@@ -113,6 +181,8 @@ const diagnosticQuestions = [
     measures: [
       { name: 'Electronics', weight: 1 },
       { name: 'Arduino', weight: 1 },
+      { name: 'Sensors', weight: 1 },
+      { name: 'C++', weight: 0.7 },
     ],
     options: [
       { score: 1, label: 'I cannot build sensor prototypes yet.' },
@@ -258,7 +328,7 @@ const Assessment = () => {
   const [expandedOptionTexts, setExpandedOptionTexts] = useState({})
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
-    name: '', email: '', experience: '', education: '',
+    name: '', email: '', password: '', experience: '', education: '',
     skillCheck: {}, skillEvidence: '', interests: [], marketSelections: { domainId: '', domainLabel: '', proofId: '', proofLabel: '', tags: [] }, careerGoals: '', workPreference: '',
   })
   const [submitting, setSubmitting] = useState(false)
@@ -290,7 +360,9 @@ const Assessment = () => {
   const diagnosticTotal = Object.values(formData.skillCheck).reduce((sum, score) => sum + Number(score || 0), 0)
   const diagnosticPercent = answeredDiagnostics ? Math.round((diagnosticTotal / (answeredDiagnostics * 5)) * 100) : 0
   const practicalTags = buildPracticalInterestTags(formData)
+  const passwordTooShort = !token && formData.password.length > 0 && formData.password.length < 6
   const canContinue = (
+    (currentStep !== 1 || !passwordTooShort) &&
     (currentStep !== 2 || answeredDiagnostics >= 4) &&
     (currentStep !== 4 || (formData.marketSelections.domainId && formData.marketSelections.proofId))
   )
@@ -313,15 +385,15 @@ const Assessment = () => {
     try {
       let authToken = token
 
-      // Auto-register if not logged in and name+email provided
-      if (!authToken && formData.name && formData.email) {
+      // Register with the password the user chose in step 1, so they can sign in again later
+      if (!authToken && formData.name && formData.email && formData.password) {
         const regRes = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: formData.name,
             email: formData.email,
-            password: Math.random().toString(36).slice(-8) + 'Aa1!', // temp password
+            password: formData.password,
           }),
         })
         const regJson = await regRes.json()
@@ -331,6 +403,10 @@ const Assessment = () => {
         } else if (regJson.error?.includes('already registered')) {
           setSubmitError('Email already registered. Please sign in first.')
           setShowAuth(true)
+          setSubmitting(false)
+          return
+        } else {
+          setSubmitError(regJson.error || regJson.errors?.[0]?.msg || 'Could not create your account.')
           setSubmitting(false)
           return
         }
@@ -427,6 +503,15 @@ const Assessment = () => {
                     <input type={type} className="input-futuristic" placeholder={placeholder} value={formData[key]} onChange={e => setFormData(p => ({ ...p, [key]: e.target.value }))} />
                   </div>
                 ))}
+                {!token && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Create Password</label>
+                    <input type="password" className="input-futuristic" placeholder="Min 6 characters — used to sign in later" autoComplete="new-password" value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))} />
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.4rem' }}>
+                      Already have an account? <button type="button" onClick={() => setShowAuth(true)} style={{ background: 'none', border: 'none', color: '#00d4ff', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline', padding: 0 }}>Sign in</button> instead.
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Experience</label>
                   <select className="input-futuristic" value={formData.experience} onChange={e => setFormData(p => ({ ...p, experience: e.target.value }))}>
@@ -694,7 +779,7 @@ const Assessment = () => {
                   className="btn-primary"
                   style={{ opacity: canContinue ? 1 : 0.45, cursor: canContinue ? 'pointer' : 'not-allowed' }}
                 >
-                  {currentStep === 2 && !canContinue ? 'Answer 4 Checks' : currentStep === 4 && !canContinue ? 'Pick Problem + Proof' : 'Continue'} <HiArrowRight />
+                  {currentStep === 1 && !canContinue ? 'Password Min 6 Chars' : currentStep === 2 && !canContinue ? 'Answer 4 Checks' : currentStep === 4 && !canContinue ? 'Pick Problem + Proof' : 'Continue'} <HiArrowRight />
                 </button>
               : <button onClick={handleSubmit} disabled={submitting} className="btn-primary" style={{ background: 'linear-gradient(135deg,#00ff88,#00cc6a)', color: '#020408', opacity: submitting ? 0.7 : 1 }}>
                   {submitting

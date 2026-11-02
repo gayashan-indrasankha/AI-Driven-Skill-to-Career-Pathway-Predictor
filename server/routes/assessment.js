@@ -32,10 +32,37 @@ const getPreference = (assessment, key) => {
   return '';
 };
 
+// GitHub language names that correspond to a differently named career skill
+const GITHUB_LANGUAGE_ALIASES = {
+  'jupyter notebook': 'Python',
+  c: 'C++',
+  tsql: 'SQL',
+  plpgsql: 'SQL',
+  plsql: 'SQL',
+};
+
+// Self-rated skills plus GitHub languages (repo share → 1-5, same scale as the simulator).
+// A GitHub signal only raises a skill; it never lowers a self-rating.
+const buildUserSkills = (assessment) => {
+  const skills = new Map((assessment.skillRatings || []).map(skill => [normalise(skill.name), skill]));
+
+  (assessment.githubData?.topLanguages || []).forEach(({ language, percentage }) => {
+    if (!language) return;
+    const name = GITHUB_LANGUAGE_ALIASES[normalise(language)] || language;
+    const proficiency = clamp(Math.ceil((percentage || 20) / 20), 1, 5);
+    const existing = skills.get(normalise(name));
+    if (!existing || (existing.proficiency || 0) < proficiency) {
+      skills.set(normalise(name), { name, proficiency, source: 'github' });
+    }
+  });
+
+  return skills;
+};
+
 const computeCareerMatches = async (assessment) => {
   const careers = await CareerPath.find({ isActive: true }).lean();
-  const userSkills = new Map((assessment.skillRatings || []).map(skill => [normalise(skill.name), skill]));
-  const userInterests = (assessment.extractedInterests || []).map(normalise);
+  const userSkills = buildUserSkills(assessment);
+  const userInterests = (assessment.extractedInterests || []).map(normalise).filter(Boolean);
   const careerGoals = Array.isArray(assessment.careerGoals)
     ? assessment.careerGoals.join(' ')
     : assessment.careerGoals || '';
@@ -119,8 +146,11 @@ router.post(
   async (req, res) => {
     if (!handleValidation(req, res)) return;
     try {
+      // Never trust client-supplied owner, status, version, or computed predictions
+      // eslint-disable-next-line no-unused-vars
+      const { user, status, version, predictedCareers, _id, ...input } = req.body;
       const payload = {
-        ...req.body,
+        ...input,
         careerGoals: Array.isArray(req.body.careerGoals)
           ? req.body.careerGoals
           : req.body.careerGoals ? [req.body.careerGoals] : [],
@@ -132,7 +162,22 @@ router.post(
         status: 'completed',
       };
 
-      const assessment = new Assessment(payload);
+      // A GitHub scan done earlier in the wizard saves to a draft/in-progress assessment.
+      // Complete that one so its GitHub data and interests count toward the match.
+      let assessment = await Assessment.findOne({
+        user: req.user.id,
+        status: { $in: ['draft', 'in-progress'] },
+      }).sort({ createdAt: -1 });
+
+      if (assessment) {
+        const draftInterests = assessment.extractedInterests || [];
+        assessment.set(payload);
+        assessment.extractedInterests = [...new Set([...draftInterests, ...(payload.extractedInterests || [])])];
+      } else {
+        assessment = new Assessment(payload);
+      }
+      payload.extractedInterests = assessment.extractedInterests;
+
       assessment.predictedCareers = await computeCareerMatches(assessment);
       assessment.status = 'analyzed';
       await assessment.save();
@@ -196,7 +241,10 @@ router.patch('/:id', protect, [param('id').isMongoId()], async (req, res) => {
       return res.status(400).json({ success: false, error: 'Cannot modify a completed assessment' });
     }
 
-    Object.assign(assessment, req.body);
+    // Only user-editable inputs; never owner, status, version, or computed predictions
+    const editable = ['personalityTraits', 'dominantPersonalityType', 'portfolioData', 'quizResults',
+                      'skillRatings', 'extractedInterests', 'careerGoals', 'workPreferences'];
+    editable.forEach(field => { if (req.body[field] !== undefined) assessment[field] = req.body[field]; });
     await assessment.save();
     res.json({ success: true, data: assessment });
   } catch (err) {

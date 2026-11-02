@@ -57,6 +57,9 @@ router.post(
       if (!user || !(await user.comparePassword(password))) {
         return res.status(401).json({ success: false, error: 'Invalid email or password' });
       }
+      if (!user.isActive) {
+        return res.status(403).json({ success: false, error: 'This account has been deactivated' });
+      }
       res.json({ success: true, user, token: generateToken(user._id) });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
