@@ -15,7 +15,7 @@ Built for **SLIIT Ignite Innovation 2026** · MERN stack · Google Gemini AI · 
 ![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT_Auth-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
 
-<img src="docs/screenshots/home.png" alt="PathAI home page" width="100%" />
+<img src="docs/screenshots/hero.webp" alt="PathAI banner: Skill-to-Career Pathway Predictor with a preview of the Career Intelligence Hub dashboard" width="100%" />
 
 </div>
 
